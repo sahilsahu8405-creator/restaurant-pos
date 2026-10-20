@@ -90,11 +90,18 @@ function AppRouter() {
     path === '/privacy' ||
     path === '/terms';
 
-  // In desktop app, cashier counter always boots straight into POS Shell!
+  // In native desktop software (Electron), ALWAYS render POS Shell directly!
+  // Cashiers at billing counter will never see the marketing website.
+  if (isDesktopApp) {
+    return (
+      <Shell
+        initialAuthTab={isRegisterRoute ? 'register_owner' : 'signin'}
+      />
+    );
+  }
+
   // On web, unauthenticated root boots into marketing website.
-  const isWebsiteMode = isDesktopApp
-    ? path === '/' || path.startsWith('/website') || window.location.search.includes('view=website')
-    : (session || kdsDevice)
+  const isWebsiteMode = (session || kdsDevice)
     ? isMarketingSubpage || (path === '/' && window.location.search.includes('view=website'))
     : !isLoginRoute && !isRegisterRoute && !isAppRoute;
 
