@@ -3,6 +3,7 @@ apply plugin: 'com.android.application'
 android {
     namespace = "com.restohub.pos"
     compileSdk = rootProject.ext.compileSdkVersion
+    buildToolsVersion = rootProject.ext.buildToolsVersion
     defaultConfig {
         applicationId "com.restohub.pos"
         minSdkVersion rootProject.ext.minSdkVersion

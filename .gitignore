@@ -13,6 +13,8 @@ dist-ssr
 dist-electron
 release
 public/downloads/*.zip
+public/downloads/*.apk
+dist/downloads/*.apk
 *.local
 .env
 .env.*

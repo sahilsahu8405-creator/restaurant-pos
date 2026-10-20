@@ -30,10 +30,16 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 cd ..
+if not exist "public\downloads" mkdir "public\downloads"
+if not exist "dist\downloads" mkdir "dist\downloads"
+copy /y "android\app\build\outputs\apk\debug\app-debug.apk" "public\downloads\RestoHub-POS.apk"
+copy /y "android\app\build\outputs\apk\debug\app-debug.apk" "dist\downloads\RestoHub-POS.apk"
+
 echo.
 echo ========================================================
 echo   SUCCESS! RestoHub POS Android APK generated:
-echo   android\app\build\outputs\apk\debug\app-debug.apk
+echo   - android\app\build\outputs\apk\debug\app-debug.apk
+echo   - public\downloads\RestoHub-POS.apk (Ready on Website!)
 echo ========================================================
 echo.
 pause

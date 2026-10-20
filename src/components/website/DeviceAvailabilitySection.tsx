@@ -11,6 +11,7 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
   onRequestAccess,
 }) => {
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [isAndroidModalOpen, setIsAndroidModalOpen] = useState(false);
 
   const handleDownloadWindows = () => {
     // Initiate browser file download for the compiled zip archive
@@ -21,6 +22,17 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
     link.click();
     document.body.removeChild(link);
     setIsDownloadModalOpen(true);
+  };
+
+  const handleDownloadAndroid = () => {
+    // Initiate browser file download for the compiled Android APK
+    const link = document.createElement('a');
+    link.href = '/downloads/RestoHub-POS.apk';
+    link.setAttribute('download', 'RestoHub-POS.apk');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setIsAndroidModalOpen(true);
   };
 
   const devices = [
@@ -53,11 +65,12 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
     },
     {
       platform: 'Android App',
-      subtitle: 'Waiters & KDS Handhelds',
-      status: 'Coming Soon',
-      isLive: false,
-      buttonText: 'Request Access',
-      buttonAction: () => onRequestAccess?.('Android App'),
+      subtitle: 'Waiters, Tablets & Handheld POS',
+      status: 'Available Now',
+      isLive: true,
+      isHighlighted: false,
+      buttonText: 'Download APK',
+      buttonAction: () => setIsAndroidModalOpen(true),
       icon: (
         <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
           <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9993.4482.9993.9993.0001.5511-.4483.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.411 13.8533 8 12 8s-3.5902.411-5.1368.9507L4.841 5.4477a.416.416 0 00-.5677-.1521.4157.4157 0 00-.152 5676l1.9972 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3433-4.1021-2.689-7.5743-6.1185-9.4396"/>
@@ -286,6 +299,121 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
                 </button>
                 <div className="text-[11px] text-center text-slate-400">
                   Compatible with Windows 10 & 11 • Standalone Portable Package
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Android APK Download Modal */}
+      {isAndroidModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-xl w-full border border-[#E3DDD2] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="p-6 sm:p-7 border-b border-[#F0EAE0] flex items-center justify-between bg-[#FAF7F2]">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+                  <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                    <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9993.4482.9993.9993.0001.5511-.4483.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.411 13.8533 8 12 8s-3.5902.411-5.1368.9507L4.841 5.4477a.416.416 0 00-.5677-.1521.4157.4157 0 00-.152 5676l1.9972 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3433-4.1021-2.689-7.5743-6.1185-9.4396"/>
+                  </svg>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-serif-headline text-lg sm:text-xl font-bold text-[#171A18]">
+                      RestoHub for Android
+                    </h3>
+                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                      v1.0.0 APK
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#686A64] mt-0.5">
+                    Native Android app for waiter tablets, kitchen KDS, and handheld POS devices
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsAndroidModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 sm:p-8 space-y-6">
+              
+              {/* Features summary badge grid */}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-slate-700">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Bluetooth & WiFi Thermal Printing</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-slate-700">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Real-Time Kitchen KDS Sync</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-slate-700">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Screen Always-On Mode</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-slate-700">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Table Order Taking & Cashier POS</span>
+                </div>
+              </div>
+
+              {/* 3 Step Quick Setup Guide */}
+              <div className="space-y-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Quick 3-Step Tablet & Phone Setup
+                </div>
+                <div className="space-y-2.5 text-xs text-slate-600">
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-50/50 border border-orange-100">
+                    <span className="w-5 h-5 rounded-full bg-[#E87524] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                      1
+                    </span>
+                    <div>
+                      <span className="font-bold text-[#171A18]">Download the APK:</span> Tap the download button below directly on your Android tablet or smartphone to get <code className="bg-white px-1.5 py-0.5 rounded border border-orange-200 text-orange-800">RestoHub-POS.apk</code>.
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                      2
+                    </span>
+                    <div>
+                      <span className="font-bold text-[#171A18]">Install on Device:</span> Tap the downloaded file in your notification bar or Downloads folder. If prompted, toggle <em>Allow from this source</em>.
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                      3
+                    </span>
+                    <div>
+                      <span className="font-bold text-[#171A18]">Open & Connect:</span> Launch RestoHub POS and sign in with your staff account. Real-time table orders and kitchen sync are active immediately!
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Download Buttons */}
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={handleDownloadAndroid}
+                  className="w-full py-3.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer transition-all"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download RestoHub Android APK (Universal)</span>
+                </button>
+                <div className="text-[11px] text-center text-slate-400">
+                  Compatible with Android 7.0+ (Nougat through Android 15) • Tablets & Handhelds
                 </div>
               </div>
 
