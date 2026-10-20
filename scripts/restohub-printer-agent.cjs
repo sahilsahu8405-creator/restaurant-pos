@@ -88,10 +88,23 @@ const server = http.createServer((req, res) => {
   res.end(JSON.stringify({ error: 'Endpoint not found' }));
 });
 
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`\n======================================================`);
-  console.log(` RestoHub Direct Hardware Print Bridge running on:`);
-  console.log(` http://127.0.0.1:${PORT}`);
-  console.log(` Ready to accept silent ESC/POS print jobs from POS!`);
-  console.log(`======================================================\n`);
-});
+function startPrinterServer(customPort) {
+  const listenPort = customPort || process.env.PORT || PORT;
+  if (!server.listening) {
+    server.listen(listenPort, '127.0.0.1', () => {
+      console.log(`\n======================================================`);
+      console.log(` RestoHub Direct Hardware Print Bridge running on:`);
+      console.log(` http://127.0.0.1:${listenPort}`);
+      console.log(` Ready to accept silent ESC/POS print jobs from POS!`);
+      console.log(`======================================================\n`);
+    });
+  }
+  return server;
+}
+
+if (require.main === module) {
+  startPrinterServer();
+}
+
+module.exports = { startPrinterServer, server };
+
