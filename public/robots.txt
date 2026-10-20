@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /pos/
+Disallow: /admin/
+Disallow: /dashboard/
+
+Sitemap: https://restaurant-pos-gilt-seven.vercel.app/sitemap.xml
