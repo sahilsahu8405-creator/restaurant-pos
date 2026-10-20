@@ -13,9 +13,14 @@
     "preview": "vite preview",
     "print-agent": "node scripts/restohub-printer-agent.cjs",
     "electron:dev": "concurrently -k -s first \"npm run dev\" \"cross-env NODE_ENV=development electron electron/main.cjs\"",
-    "electron:build": "npm run build && node scripts/build-electron.cjs"
+    "electron:build": "npm run build && node scripts/build-electron.cjs",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:build": "scripts\\build-apk.bat"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
     "@supabase/supabase-js": "^2.118.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.57.0",
@@ -24,6 +29,7 @@
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "@electron/packager": "^20.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",

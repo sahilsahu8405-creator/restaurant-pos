@@ -1,0 +1,24 @@
+{
+  "short_name": "RestoHub",
+  "name": "RestoHub — Restaurant Operating System & POS",
+  "description": "Unified POS, Table Management, Kitchen KDS, and Billing for Restaurants",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#FAF7F2",
+  "theme_color": "#E87524",
+  "display": "standalone",
+  "orientation": "any",
+  "categories": ["business", "productivity", "food"]
+}
