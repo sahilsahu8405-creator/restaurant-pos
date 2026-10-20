@@ -1,13 +1,110 @@
-import React from 'react';
-import { AuthProvider } from './context/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
 import { Shell } from './components/layout/Shell';
+import { WebsiteApp } from './components/website/WebsiteApp';
+
+function AppRouter() {
+  const { session, kdsDevice } = useAuth();
+  const getPath = () => window.location.pathname || '/';
+
+  const [path, setPath] = useState<string>(getPath());
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setPath(getPath());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (newPath: string) => {
+    if (window.location.pathname !== newPath) {
+      window.history.pushState({}, '', newPath);
+      setPath(newPath);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Immediate detection of OAuth redirect tokens in URL (e.g. from Google Sign-In)
+  useEffect(() => {
+    const isOAuthReturn =
+      window.location.hash.includes('access_token=') ||
+      window.location.search.includes('code=');
+
+    if (isOAuthReturn && window.location.pathname !== '/app') {
+      navigateTo('/app');
+    }
+  }, []);
+
+  // When an authenticated session is active (e.g. signed in via Google or password):
+  // Direct redirect to the restaurant app if user visits root or login routes
+  useEffect(() => {
+    const isAuthenticated = !!session || !!kdsDevice;
+    if (isAuthenticated) {
+      const isAuthOrRoot =
+        path === '/' ||
+        path === '/login' ||
+        path === '/register' ||
+        path === '/signin' ||
+        path === '/signup';
+
+      const hasExplicitWebsiteParam = window.location.search.includes('view=website');
+
+      if (isAuthOrRoot && !hasExplicitWebsiteParam) {
+        navigateTo('/app');
+      }
+    }
+  }, [session, kdsDevice, path]);
+
+  // Determine current display mode
+  const isLoginRoute = path === '/login' || path === '/signin';
+  const isRegisterRoute = path === '/register' || path === '/signup';
+  const isAppRoute = path === '/app' || path.startsWith('/pos');
+
+  const isMarketingSubpage =
+    path === '/product' ||
+    path === '/solutions' ||
+    path === '/pricing' ||
+    path === '/resources' ||
+    path === '/contact' ||
+    path === '/privacy' ||
+    path === '/terms';
+
+  // If user is authenticated, default to App unless viewing an explicit marketing subpage or ?view=website
+  const isWebsiteMode = (session || kdsDevice)
+    ? isMarketingSubpage || (path === '/' && window.location.search.includes('view=website'))
+    : !isLoginRoute && !isRegisterRoute && !isAppRoute;
+
+  return (
+    <>
+      {isWebsiteMode ? (
+        <WebsiteApp
+          onEnterApp={() => navigateTo('/app')}
+          onEnterLogin={() => navigateTo('/login')}
+          onEnterRegister={() => navigateTo('/register')}
+        />
+      ) : (
+        <Shell
+          initialAuthTab={isRegisterRoute ? 'register_owner' : 'signin'}
+          onBackToWebsite={() => {
+            if (session || kdsDevice) {
+              navigateTo('/?view=website');
+            } else {
+              navigateTo('/');
+            }
+          }}
+        />
+      )}
+    </>
+  );
+}
 
 export function App() {
   return (
     <AuthProvider>
       <AppProvider>
-        <Shell />
+        <AppRouter />
       </AppProvider>
     </AuthProvider>
   );

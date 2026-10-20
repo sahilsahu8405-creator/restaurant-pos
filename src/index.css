@@ -5,7 +5,17 @@
 @layer base {
   :root {
     --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-serif: 'Newsreader', 'Playfair Display', Georgia, Cambria, serif;
     --font-mono: 'JetBrains Mono', monospace;
+
+    /* RestoHub Website Theme Tokens */
+    --color-warm-ivory: #FBF8F3;
+    --color-warm-secondary: #EFE9DF;
+    --color-charcoal: #171A18;
+    --color-burnt-orange: #E87524;
+    --color-burnt-orange-hover: #CC5E15;
+    --color-border-warm: #E3DDD2;
+    --color-dark-section: #171B17;
     
     /* Light Theme (Clean white, warm subtle gray background, subtle borders, premium blue primary) */
     --bg-app: #F8FAFC;
@@ -92,6 +102,22 @@
 
 .animate-fade-in {
   animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.font-serif-headline {
+  font-family: var(--font-serif);
+}
+
+.bg-warm-ivory {
+  background-color: #FAF7F2;
+}
+
+.bg-warm-secondary {
+  background-color: #EFE9DF;
+}
+
+.border-warm {
+  border-color: #E3DDD2;
 }
 
 /* Scrollbar None Utility */

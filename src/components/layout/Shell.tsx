@@ -41,7 +41,15 @@ import {
   Moon,
 } from 'lucide-react';
 
-export const Shell: React.FC = () => {
+interface ShellProps {
+  initialAuthTab?: 'signin' | 'register_owner' | 'invitation' | 'pair_kds';
+  onBackToWebsite?: () => void;
+}
+
+export const Shell: React.FC<ShellProps> = ({
+  initialAuthTab = 'signin',
+  onBackToWebsite,
+}) => {
   const {
     workspace,
     setWorkspace,
@@ -109,9 +117,11 @@ export const Shell: React.FC = () => {
     return (
       <>
         <LoginView
+          initialTab={initialAuthTab}
           onOpenInvitation={() => setIsInvitationOpen(true)}
           onOpenOwnerBootstrap={() => setIsOwnerBootstrapOpen(true)}
           onOpenKdsPairing={() => setIsKdsPairingOpen(true)}
+          onBackToWebsite={onBackToWebsite}
         />
         <StaffInvitationModal
           isOpen={isInvitationOpen}

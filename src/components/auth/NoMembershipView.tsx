@@ -15,13 +15,18 @@ import { useAuth } from '../../context/AuthContext';
 export const NoMembershipView: React.FC = () => {
   const { user, profile, logout, createRestaurant, acceptStaffInvitation, isLoading, error, clearError } = useAuth();
 
-  const [mode, setMode] = useState<'options' | 'create_restaurant' | 'accept_invite'>('options');
+  const pendingRestName = typeof window !== 'undefined' ? localStorage.getItem('restohub_pending_restaurant_name') || '' : '';
+  const pendingCurrency = typeof window !== 'undefined' ? localStorage.getItem('restohub_pending_currency') || 'INR' : 'INR';
+
+  const [mode, setMode] = useState<'options' | 'create_restaurant' | 'accept_invite'>(() => {
+    return pendingRestName ? 'create_restaurant' : 'options';
+  });
 
   // Create restaurant fields
-  const [restaurantName, setRestaurantName] = useState('');
+  const [restaurantName, setRestaurantName] = useState(pendingRestName);
   const [outletName, setOutletName] = useState('Main Branch');
   const [outletCode, setOutletCode] = useState('MAIN');
-  const [currency, setCurrency] = useState('INR');
+  const [currency, setCurrency] = useState(pendingCurrency);
   const [phone, setPhone] = useState('');
 
   // Invite fields
@@ -42,6 +47,8 @@ export const NoMembershipView: React.FC = () => {
         fullName: profile?.fullName || user?.email?.split('@')[0],
         phone: phone.trim() || undefined,
       });
+      localStorage.removeItem('restohub_pending_restaurant_name');
+      localStorage.removeItem('restohub_pending_currency');
     } catch {
       // Error handled in context
     }

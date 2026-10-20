@@ -462,7 +462,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: `${window.location.origin}/app`,
         },
       });
       if (oauthErr) throw oauthErr;
