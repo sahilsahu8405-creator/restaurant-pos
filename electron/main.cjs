@@ -32,20 +32,23 @@ function createWindow() {
     },
   });
 
-  // Enable F11 fullscreen toggle for cashier POS mode
+  // Keyboard shortcuts: F11 for Fullscreen, F12 for DevTools
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.key === 'F11' && input.type === 'keyDown') {
       mainWindow.setFullScreen(!mainWindow.isFullScreen());
       event.preventDefault();
     }
+    if (input.key === 'F12' && input.type === 'keyDown') {
+      mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+    }
   });
 
   if (isDev) {
-    const devUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
+    const devUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173/#/app';
     mainWindow.loadURL(devUrl);
-    // mainWindow.webContents.openDevTools(); // Uncomment if debugging dev tools
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: '/app' });
   }
 
   mainWindow.on('closed', () => {

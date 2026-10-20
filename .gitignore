@@ -12,6 +12,7 @@ dist
 dist-ssr
 dist-electron
 release
+public/downloads/*.zip
 *.local
 .env
 .env.*

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Monitor, Smartphone, Tablet, ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowUpRight, Download, CheckCircle2, X, Terminal, Monitor, Sparkles, ExternalLink } from 'lucide-react';
 
 interface DeviceAvailabilityProps {
   onOpenWebApp: () => void;
@@ -10,13 +10,26 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
   onOpenWebApp,
   onRequestAccess,
 }) => {
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+
+  const handleDownloadWindows = () => {
+    // Initiate browser file download for the compiled zip archive
+    const link = document.createElement('a');
+    link.href = '/downloads/RestoHub-POS-Windows-x64.zip';
+    link.setAttribute('download', 'RestoHub-POS-Windows-x64.zip');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setIsDownloadModalOpen(true);
+  };
+
   const devices = [
     {
       platform: 'Web App',
-      subtitle: 'Use in browser',
+      subtitle: 'Use in Chrome, Edge, Safari',
       status: 'Available Now',
       isLive: true,
-      buttonText: 'Open Now',
+      buttonText: 'Open Web App',
       buttonAction: onOpenWebApp,
       icon: (
         <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
@@ -25,12 +38,13 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
       ),
     },
     {
-      platform: 'Windows App',
-      subtitle: 'Download for PC',
-      status: 'Coming Soon',
-      isLive: false,
-      buttonText: 'Download',
-      buttonAction: () => onRequestAccess?.('Windows App'),
+      platform: 'Windows Desktop Software',
+      subtitle: 'Native App for PC & Billing Counter',
+      status: 'Available Now',
+      isLive: true,
+      isHighlighted: true,
+      buttonText: 'Download for PC',
+      buttonAction: () => setIsDownloadModalOpen(true),
       icon: (
         <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
           <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
@@ -39,10 +53,10 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
     },
     {
       platform: 'Android App',
-      subtitle: 'Get it on Play Store',
+      subtitle: 'Waiters & KDS Handhelds',
       status: 'Coming Soon',
       isLive: false,
-      buttonText: 'Download',
+      buttonText: 'Request Access',
       buttonAction: () => onRequestAccess?.('Android App'),
       icon: (
         <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
@@ -51,11 +65,11 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
       ),
     },
     {
-      platform: 'iOS App',
-      subtitle: 'Get it on App Store',
+      platform: 'iOS & iPad App',
+      subtitle: 'Apple iPads & iPhones',
       status: 'Coming Soon',
       isLive: false,
-      buttonText: 'Download',
+      buttonText: 'Request Access',
       buttonAction: () => onRequestAccess?.('iOS App'),
       icon: (
         <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
@@ -66,16 +80,20 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
   ];
 
   return (
-    <section className="py-16 sm:py-24 px-6 sm:px-8 bg-[#FAF7F2]">
+    <section className="py-16 sm:py-24 px-6 sm:px-8 bg-[#FAF7F2] relative">
       <div className="max-w-7xl mx-auto space-y-12 sm:space-y-16">
         
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-orange-100/80 text-[#E87524]">
+            <Sparkles className="w-3.5 h-3.5" />
+            Hardware & Platform Support
+          </div>
           <h2 className="font-serif-headline text-3xl sm:text-4xl lg:text-5xl font-bold text-[#171A18] tracking-tight">
             Available on All Your Devices
           </h2>
           <p className="text-sm sm:text-base text-[#686A64]">
-            Use RestoHub in your browser or install on your preferred device.
+            Use RestoHub directly in your browser or download our native Windows software for counter billing and silent thermal printing.
           </p>
         </div>
 
@@ -84,17 +102,27 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
           {devices.map((device, idx) => (
             <div
               key={idx}
-              className={`rounded-3xl p-6 sm:p-7 border flex flex-col justify-between space-y-6 transition-all duration-200 ${
-                device.isLive
-                  ? 'bg-white border-[#E87524]/60 shadow-md shadow-orange-600/10'
+              className={`rounded-3xl p-6 sm:p-7 border flex flex-col justify-between space-y-6 transition-all duration-200 relative ${
+                device.isHighlighted
+                  ? 'bg-white border-[#E87524] shadow-lg shadow-orange-500/10 ring-2 ring-[#E87524]/20'
+                  : device.isLive
+                  ? 'bg-white border-[#E3DDD2] shadow-sm hover:shadow-md'
                   : 'bg-white/80 border-[#E3DDD2] shadow-2xs hover:shadow-xs'
               }`}
             >
+              {device.isHighlighted && (
+                <div className="absolute -top-3 right-6 bg-[#E87524] text-white text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                  Cashier Choice
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                    device.isLive
+                    device.isHighlighted
                       ? 'bg-orange-50 text-[#E87524]'
+                      : device.isLive
+                      ? 'bg-blue-50 text-blue-600'
                       : 'bg-slate-100 text-slate-700'
                   }`}>
                     {device.icon}
@@ -124,18 +152,27 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
                 <button
                   onClick={device.buttonAction}
                   className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    device.isLive
-                      ? 'bg-[#E87524] hover:bg-[#CC5E15] text-white shadow-xs'
+                    device.isHighlighted
+                      ? 'bg-[#E87524] hover:bg-[#CC5E15] text-white shadow-sm'
+                      : device.isLive
+                      ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-xs'
                       : 'border border-[#E3DDD2] hover:bg-slate-50 text-slate-700'
                   }`}
                 >
+                  {device.isHighlighted ? <Download className="w-3.5 h-3.5" /> : null}
                   <span>{device.buttonText}</span>
-                  {device.isLive && <ArrowUpRight className="w-3.5 h-3.5" />}
+                  {device.isLive && !device.isHighlighted && <ArrowUpRight className="w-3.5 h-3.5" />}
                 </button>
 
                 {!device.isLive && (
                   <div className="text-[10px] text-center text-slate-400 font-medium">
                     Coming Soon
+                  </div>
+                )}
+                {device.isHighlighted && (
+                  <div className="text-[10px] text-center text-emerald-700 font-medium flex items-center justify-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    Built-in Silent ESC/POS Printer Bridge
                   </div>
                 )}
               </div>
@@ -144,6 +181,120 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
         </div>
 
       </div>
+
+      {/* Windows Software Download Modal */}
+      {isDownloadModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="p-6 sm:p-8 bg-linear-to-b from-orange-50/70 to-white border-b border-orange-100 flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-[#E87524] text-white flex items-center justify-center shadow-md shadow-orange-600/20">
+                  <Monitor className="w-7 h-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-serif-headline text-2xl font-bold text-[#171A18]">
+                      RestoHub for Windows
+                    </h3>
+                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                      v1.0.0
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#686A64] mt-0.5">
+                    Native desktop software with integrated thermal receipt printer bridge
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsDownloadModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 sm:p-8 space-y-6">
+              
+              {/* Features summary badge grid */}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-slate-700">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Silent ESC/POS Printing (Port 9100)</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-slate-700">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Cash Drawer Kick Command</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-slate-700">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>F11 Cashier Kiosk Lockdown</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-slate-700">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Offline Menu & Cart Cache</span>
+                </div>
+              </div>
+
+              {/* 3 Step Quick Setup Guide */}
+              <div className="space-y-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Quick 3-Step Setup
+                </div>
+                <div className="space-y-2.5 text-xs text-slate-600">
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-50/50 border border-orange-100">
+                    <span className="w-5 h-5 rounded-full bg-[#E87524] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                      1
+                    </span>
+                    <div>
+                      <span className="font-bold text-[#171A18]">Download the archive:</span> Click the button below to download <code className="bg-white px-1.5 py-0.5 rounded border border-orange-200 text-orange-800">RestoHub-POS-Windows-x64.zip</code>.
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                      2
+                    </span>
+                    <div>
+                      <span className="font-bold text-[#171A18]">Extract & Open:</span> Right-click the zip file &gt; <em>Extract All</em>. Double-click <strong className="text-slate-900">RestoHub POS.exe</strong>.
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                      3
+                    </span>
+                    <div>
+                      <span className="font-bold text-[#171A18]">Start Billing:</span> Sign in with your Restaurant ID and PIN. Hardware thermal printers and cash drawers connect automatically!
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Download Buttons */}
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={handleDownloadWindows}
+                  className="w-full py-3.5 px-6 rounded-2xl bg-[#E87524] hover:bg-[#CC5E15] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md shadow-orange-500/20 cursor-pointer transition-all"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download RestoHub for Windows (64-bit)</span>
+                </button>
+                <div className="text-[11px] text-center text-slate-400">
+                  Compatible with Windows 10 & 11 • Standalone Portable Package
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </section>
   );
 };

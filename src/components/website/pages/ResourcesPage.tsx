@@ -79,7 +79,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ navigate }) => {
     },
     {
       q: 'How do I download the Windows application?',
-      a: 'RestoHub is currently distributed as a high-performance web application accessible through Chrome and Edge, and installable directly as a Progressive Web App (PWA). A standalone native Windows installer is planned and currently in testing.',
+      a: 'RestoHub for Windows is available for direct download on our website. It includes the built-in silent ESC/POS hardware printer bridge (port 9100) and kiosk mode for billing counters, with no browser print popups.',
     },
     {
       q: 'How do I get in touch with the product team?',

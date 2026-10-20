@@ -6,19 +6,38 @@ import { WebsiteApp } from './components/website/WebsiteApp';
 
 function AppRouter() {
   const { session, kdsDevice } = useAuth();
-  const getPath = () => window.location.pathname || '/';
+  const isFileProtocol = typeof window !== 'undefined' && window.location.protocol === 'file:';
+  const isDesktopApp = isFileProtocol || !!(window as any).restohubNative?.isElectron;
+
+  const getPath = () => {
+    if (isDesktopApp) {
+      const hash = window.location.hash.replace(/^#/, '');
+      return hash ? (hash.startsWith('/') ? hash : `/${hash}`) : '/app';
+    }
+    return window.location.pathname || '/';
+  };
 
   const [path, setPath] = useState<string>(getPath());
 
   useEffect(() => {
-    const handlePopState = () => {
+    const handleLocationChange = () => {
       setPath(getPath());
     };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
   }, []);
 
   const navigateTo = (newPath: string) => {
+    if (isDesktopApp) {
+      window.location.hash = newPath;
+      setPath(newPath);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     if (window.location.pathname !== newPath) {
       window.history.pushState({}, '', newPath);
       setPath(newPath);
@@ -71,8 +90,11 @@ function AppRouter() {
     path === '/privacy' ||
     path === '/terms';
 
-  // If user is authenticated, default to App unless viewing an explicit marketing subpage or ?view=website
-  const isWebsiteMode = (session || kdsDevice)
+  // In desktop app, cashier counter always boots straight into POS Shell!
+  // On web, unauthenticated root boots into marketing website.
+  const isWebsiteMode = isDesktopApp
+    ? path === '/' || path.startsWith('/website') || window.location.search.includes('view=website')
+    : (session || kdsDevice)
     ? isMarketingSubpage || (path === '/' && window.location.search.includes('view=website'))
     : !isLoginRoute && !isRegisterRoute && !isAppRoute;
 
