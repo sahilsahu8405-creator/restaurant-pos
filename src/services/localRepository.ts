@@ -1299,6 +1299,7 @@ class LocalDataRepository implements IDataAdapter {
     };
     this.saveTables();
     this.notifyChange();
+    upsertSupabaseTable(this.tables[tableIndex]).catch(() => {});
     return this.tables[tableIndex];
   }
 
@@ -1420,6 +1421,9 @@ class LocalDataRepository implements IDataAdapter {
     };
 
     this.saveOrders();
+    this.notifyChange();
+    syncOrderToSupabase(this.orders[idx]).catch(() => {});
+
     await this.recordAuditLog({
       action: 'ADD_ITEMS_TO_ORDER',
       entityType: 'order',
@@ -1469,6 +1473,8 @@ class LocalDataRepository implements IDataAdapter {
     order.updatedAt = new Date().toISOString();
 
     this.saveOrders();
+    this.notifyChange();
+    syncOrderToSupabase(order).catch(() => {});
     return order;
   }
 
@@ -1597,8 +1603,9 @@ class LocalDataRepository implements IDataAdapter {
       window.dispatchEvent(new CustomEvent('restohub:operational-change'));
     }
 
-    // Persist to Supabase kot_tickets table
+    // Persist to Supabase kot_tickets table and sync updated order items
     syncKotTicketsToSupabase(createdTickets).catch(() => {});
+    syncOrderToSupabase(order).catch(() => {});
 
     await this.recordAuditLog({
       action: 'FIRE_KOT_TICKETS',
@@ -1959,43 +1966,71 @@ class LocalDataRepository implements IDataAdapter {
     return notification;
   }
 
-  async markKitchenNotificationRead(id: string): Promise<KitchenNotification> {
-    const idx = this.kitchenNotifications.findIndex((n) => n.id === id);
-    if (idx === -1) throw new Error('Notification not found');
-
-    this.kitchenNotifications[idx] = {
-      ...this.kitchenNotifications[idx],
-      read: true,
-    };
+  public addOrMergeKitchenNotification(notif: KitchenNotification): void {
+    if (!notif || !notif.id) return;
+    const idx = this.kitchenNotifications.findIndex((n) => n.id === notif.id);
+    if (idx !== -1) {
+      this.kitchenNotifications[idx] = { ...this.kitchenNotifications[idx], ...notif };
+    } else {
+      this.kitchenNotifications.unshift(notif);
+      if (this.kitchenNotifications.length > 200) {
+        this.kitchenNotifications.pop();
+      }
+    }
     this.saveNotifications();
+  }
+
+  async markKitchenNotificationRead(id: string): Promise<KitchenNotification | null> {
+    const idx = this.kitchenNotifications.findIndex((n) => n.id === id);
+    if (idx !== -1) {
+      this.kitchenNotifications[idx] = {
+        ...this.kitchenNotifications[idx],
+        read: true,
+      };
+      this.saveNotifications();
+    }
     updateKitchenNotificationInSupabase(id, { read: true }).catch(() => {});
-    return this.kitchenNotifications[idx];
+    return idx !== -1 ? this.kitchenNotifications[idx] : null;
   }
 
   async markKitchenNotificationServed(
     id: string,
     servedBy?: string
   ): Promise<{ notification: KitchenNotification; order?: Order }> {
-    const idx = this.kitchenNotifications.findIndex((n) => n.id === id);
-    if (idx === -1) throw new Error('Notification not found');
-
-    const notif = this.kitchenNotifications[idx];
-    if (notif.served) {
-      const existingOrder = this.orders.find((o) => o.id === notif.orderId);
-      return { notification: notif, order: existingOrder };
-    }
-
     const now = new Date().toISOString();
     const serverName = servedBy || 'Staff';
 
-    this.kitchenNotifications[idx] = {
-      ...notif,
-      served: true,
-      servedAt: now,
-      servedBy: serverName,
-      read: true,
-    };
-    this.saveNotifications();
+    let notif: KitchenNotification;
+    const idx = this.kitchenNotifications.findIndex((n) => n.id === id);
+    if (idx !== -1) {
+      this.kitchenNotifications[idx] = {
+        ...this.kitchenNotifications[idx],
+        served: true,
+        servedAt: now,
+        servedBy: serverName,
+        read: true,
+      };
+      notif = this.kitchenNotifications[idx];
+      this.saveNotifications();
+    } else {
+      notif = {
+        id,
+        outletId: '',
+        restaurantId: '',
+        orderId: '',
+        orderNumber: '',
+        orderType: 'dine_in',
+        notificationType: 'order_ready',
+        isAllItemsReady: true,
+        items: [],
+        message: 'Order served',
+        createdAt: now,
+        read: true,
+        served: true,
+        servedAt: now,
+        servedBy: serverName,
+      };
+    }
 
     // Instant sync to update across tabs & devices
     postCrossTabEvent({

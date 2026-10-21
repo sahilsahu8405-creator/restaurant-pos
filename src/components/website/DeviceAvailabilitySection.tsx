@@ -14,10 +14,13 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
   const [isAndroidModalOpen, setIsAndroidModalOpen] = useState(false);
 
   const handleDownloadWindows = () => {
-    // Initiate browser file download for the compiled zip archive
+    // Initiate direct download from official GitHub release CDN asset
+    const downloadUrl = 'https://github.com/sahilsahu8405-creator/restaurant-pos/releases/download/v1.0.0/RestoHub-POS-Windows-x64.zip';
     const link = document.createElement('a');
-    link.href = '/downloads/RestoHub-POS-Windows-x64.zip';
+    link.href = downloadUrl;
     link.setAttribute('download', 'RestoHub-POS-Windows-x64.zip');
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

@@ -1053,7 +1053,8 @@ export async function syncOrderToSupabase(order: any) {
       outlet_id: outletId,
       order_number: order.orderNumber,
       order_type: order.orderType,
-      customer_name: order.customerName || null,
+      table_id: order.tableId && isUuidPattern.test(order.tableId) ? order.tableId : null,
+      customer_name: order.customerName || (order.tableName ? order.tableName : null),
       guest_count: order.guestCount || 1,
       status: order.status,
       payment_status: order.paymentStatus,
@@ -1062,7 +1063,7 @@ export async function syncOrderToSupabase(order: any) {
       tax_paise: (order.cgstPaise || 0) + (order.sgstPaise || 0),
       rounding_paise: order.roundingPaise || 0,
       total_paise: order.totalPaise,
-      notes: order.notes || null,
+      notes: order.notes || (order.tableName ? `Table: ${order.tableName}` : null),
       created_at: order.createdAt,
       updated_at: order.updatedAt,
     };

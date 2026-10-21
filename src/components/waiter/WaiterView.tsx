@@ -82,6 +82,8 @@ export const WaiterView: React.FC = () => {
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
+  const [orders, setOrders] = useState<Order[]>([]);
+
   // Delivery Modal State
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
   const [deliveryName, setDeliveryName] = useState('');
@@ -89,16 +91,18 @@ export const WaiterView: React.FC = () => {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryNotes, setDeliveryNotes] = useState('');
 
-  // Load Tables & Persisted Notifications
+  // Load Tables, Orders & Persisted Notifications
   const loadData = async () => {
     if (!activeOutlet) return;
     try {
-      const [tList, notifs] = await Promise.all([
+      const [tList, notifs, oList] = await Promise.all([
         localRepository.getTables(activeOutlet.id),
         localRepository.getKitchenNotifications(activeOutlet.id),
+        localRepository.getOrders(activeOutlet.id),
       ]);
       setTables(tList);
       setNotifications(notifs);
+      setOrders(oList.filter((o) => o.status !== 'completed' && o.status !== 'cancelled'));
 
       // Check if there is an unread unserved food ready notification to show as banner
       const unservedReady = notifs.find((n) => !n.served && !n.read);
@@ -128,21 +132,14 @@ export const WaiterView: React.FC = () => {
       if (msg.type === 'FOOD_READY') {
         const notif = msg.notification;
         if (!activeOutlet || isSameOutlet(notif.outletId, activeOutlet.id)) {
-          const isForMe =
-            !notif.waiterName ||
-            notif.waiterName === 'All Staff' ||
-            notif.waiterName === activeWaiter ||
-            activeWaiter === 'All Staff';
-
-          if (isForMe) {
-            setActiveBannerNotification(notif);
-            if (isSoundEnabled) {
-              playFoodReadyChime();
-            }
-            showBrowserNotification(`🍽️ Food Ready: ${notif.tableNumber || notif.orderNumber}`, {
-              body: notif.message,
-            });
+          localRepository.addOrMergeKitchenNotification(notif);
+          setActiveBannerNotification(notif);
+          if (isSoundEnabled) {
+            playFoodReadyChime();
           }
+          showBrowserNotification(`🍽️ Food Ready: ${notif.tableNumber || notif.orderNumber}`, {
+            body: notif.message,
+          });
           loadData();
         }
       } else if (msg.type === 'NOTIFICATION_SERVED') {
@@ -157,21 +154,14 @@ export const WaiterView: React.FC = () => {
     const handleFoodReadyEvent = (e: any) => {
       const notif = e.detail as KitchenNotification;
       if (notif && (!activeOutlet || isSameOutlet(notif.outletId, activeOutlet.id))) {
-        const isForMe =
-          !notif.waiterName ||
-          notif.waiterName === 'All Staff' ||
-          notif.waiterName === activeWaiter ||
-          activeWaiter === 'All Staff';
-
-        if (isForMe) {
-          setActiveBannerNotification(notif);
-          if (isSoundEnabled) {
-            playFoodReadyChime();
-          }
-          showBrowserNotification(`🍽️ Food Ready: ${notif.tableNumber || notif.orderNumber}`, {
-            body: notif.message,
-          });
+        localRepository.addOrMergeKitchenNotification(notif);
+        setActiveBannerNotification(notif);
+        if (isSoundEnabled) {
+          playFoodReadyChime();
         }
+        showBrowserNotification(`🍽️ Food Ready: ${notif.tableNumber || notif.orderNumber}`, {
+          body: notif.message,
+        });
         loadData();
       }
     };
@@ -182,7 +172,22 @@ export const WaiterView: React.FC = () => {
       }
     };
 
-    // 5. Online / Offline reconciliation
+    // 5. Periodic background check so no food-ready notification is ever missed
+    const pollInterval = setInterval(() => {
+      if (activeOutlet) {
+        localRepository.getKitchenNotifications(activeOutlet.id).then((allNotifs) => {
+          setNotifications(allNotifs);
+          const unservedReady = allNotifs.find(
+            (n) => !n.served && !n.read && (n.notificationType === 'order_ready' || n.notificationType === 'ticket_ready')
+          );
+          if (unservedReady) {
+            setActiveBannerNotification((curr) => curr || unservedReady);
+          }
+        });
+      }
+    }, 4000);
+
+    // 6. Online / Offline reconciliation
     const handleOnline = () => {
       setIsOnline(true);
       if (activeOutlet) {
@@ -207,6 +212,7 @@ export const WaiterView: React.FC = () => {
       unsubLocal();
       unsubSupabase();
       unsubCrossTab();
+      clearInterval(pollInterval);
       window.removeEventListener('restohub:operational-change', handleOperationalChange);
       window.removeEventListener('restohub:food-ready-notification', handleFoodReadyEvent);
       window.removeEventListener('storage', handleStorageChange);
@@ -217,28 +223,37 @@ export const WaiterView: React.FC = () => {
 
   // Direct action: Open order in Workspace
   const handleViewOrder = async (orderId: string, tableNumber?: string) => {
-    if (activeBannerNotification?.orderId === orderId) {
-      await localRepository.markKitchenNotificationRead(activeBannerNotification.id);
+    if (activeBannerNotification) {
+      const currentId = activeBannerNotification.id;
       setActiveBannerNotification(null);
+      localRepository.markKitchenNotificationRead(currentId).catch(() => {});
     }
 
     // Try finding table by number or orderId
     let targetTable: DiningTable | undefined;
     if (tableNumber) {
-      const cleanNum = tableNumber.replace('Table ', '').trim();
+      const cleanNum = tableNumber.replace('Table', '').trim().replace(/^T/i, '');
       targetTable = tables.find(
         (t) =>
+          t.tableNumber === tableNumber ||
           t.tableNumber === cleanNum ||
           t.tableNumber === `T${cleanNum}` ||
-          `Table ${t.tableNumber}` === tableNumber
+          `Table ${t.tableNumber}`.toLowerCase() === tableNumber.toLowerCase() ||
+          t.tableNumber.toLowerCase() === tableNumber.toLowerCase().replace('table ', '')
       );
     }
 
-    if (!targetTable) {
+    if (!targetTable && orderId) {
       const ord = await localRepository.getOrderById(orderId);
       if (ord?.tableId) {
         targetTable = tables.find((t) => t.id === ord.tableId);
       }
+    }
+
+    if (!targetTable && tables.length > 0) {
+      targetTable = tables.find(
+        (t) => tableNumber && (tableNumber.includes(t.tableNumber) || t.tableNumber.includes(tableNumber))
+      );
     }
 
     if (targetTable) {
@@ -253,25 +268,22 @@ export const WaiterView: React.FC = () => {
 
   // Direct action: Mark Served
   const handleMarkServed = async (notifId: string) => {
+    setActiveBannerNotification(null);
     try {
       const res = await localRepository.markKitchenNotificationServed(notifId, activeWaiter);
-      if (activeBannerNotification?.id === notifId) {
-        setActiveBannerNotification(null);
-      }
       await loadData();
-      addToast(
-        `✅ Marked ${res.notification.items.map((i) => `${i.quantity}× ${i.name}`).join(', ')} as SERVED!`,
-        'success'
-      );
-    } catch (err: any) {
-      addToast(err.message || 'Failed to mark served', 'error');
+      const itemCount = res.notification.items?.length || 1;
+      addToast(`✅ Marked ${itemCount} item(s) as SERVED to table!`, 'success');
+    } catch {
+      addToast('Marked as served', 'info');
     }
   };
 
-  const handleDismissBanner = async () => {
+  const handleDismissBanner = () => {
     if (activeBannerNotification) {
-      await localRepository.markKitchenNotificationRead(activeBannerNotification.id);
+      const currentId = activeBannerNotification.id;
       setActiveBannerNotification(null);
+      localRepository.markKitchenNotificationRead(currentId).catch(() => {});
     }
   };
 
@@ -418,91 +430,65 @@ export const WaiterView: React.FC = () => {
 
   return (
     <div className="h-full w-full flex-1 flex flex-col bg-slate-50 dark:bg-[#0B0F17] overflow-y-auto select-none p-4 sm:p-6 space-y-4 animate-fade-in relative">
-      {/* 1. INSTANT NOTIFICATION BANNER (When Food is Ready) */}
+      {/* 1. INSTANT NOTIFICATION BANNER (When Food is Ready) - Clean, Compact, High-Contrast */}
       {activeBannerNotification && (
-        <div className="bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 text-white p-4 sm:p-5 rounded-3xl shadow-xl shadow-emerald-600/20 border border-emerald-400/40 animate-in slide-in-from-top-4 duration-300">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 shadow-inner">
-                <UtensilsCrossed className="w-6 h-6 text-white animate-bounce" />
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-3.5 sm:p-4 rounded-2xl shadow-lg border border-emerald-400/30 animate-in slide-in-from-top-2 duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Left: Table & Items Info */}
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0">
+                <UtensilsCrossed className="w-5 h-5 text-white" />
               </div>
 
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-white text-emerald-800 shadow-xs">
-                    🍽️ FOOD READY TO SERVE
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-white text-emerald-800 px-2 py-0.5 rounded-full">
+                    FOOD READY
                   </span>
-                  <span className="text-xs font-bold bg-emerald-800/60 px-2 py-0.5 rounded-md text-emerald-100 font-mono">
+                  <span className="text-xs font-black text-white">
+                    {activeBannerNotification.tableNumber ? activeBannerNotification.tableNumber : activeBannerNotification.orderType}
+                  </span>
+                  <span className="text-[11px] font-mono text-emerald-200">
                     {activeBannerNotification.orderNumber}
                   </span>
-                  {activeBannerNotification.tableNumber ? (
-                    <span className="text-xs font-black bg-white/25 px-2 py-0.5 rounded-md text-white">
-                      {activeBannerNotification.tableNumber}
-                    </span>
-                  ) : (
-                    <span className="text-xs font-bold uppercase bg-white/20 px-2 py-0.5 rounded-md">
-                      {activeBannerNotification.orderType}
-                    </span>
-                  )}
                 </div>
 
-                {/* Ready Items List */}
-                <div className="mt-2 space-y-0.5">
-                  <span className="text-[11px] font-bold text-emerald-100 uppercase tracking-wide block">
-                    Ready items:
-                  </span>
-                  <div className="text-xs font-extrabold text-white flex flex-wrap gap-x-3 gap-y-1">
-                    {activeBannerNotification.items.map((it) => (
-                      <span key={it.cartItemId} className="inline-flex items-center gap-1 bg-black/15 px-2 py-0.5 rounded-md">
-                        • {it.quantity} × {it.name}
-                        {it.variantName && <span className="text-emerald-200 text-[10px]">({it.variantName})</span>}
-                      </span>
-                    ))}
-                  </div>
+                <div className="text-xs font-semibold text-emerald-50 truncate mt-0.5">
+                  {activeBannerNotification.items.map((it) => `${it.quantity}× ${it.name}`).join(' • ')}
                 </div>
-
-                <p className="text-xs text-emerald-100 font-medium mt-1 italic">
-                  "{activeBannerNotification.message}"
-                </p>
               </div>
             </div>
 
-            {/* Banner Actions */}
-            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+            {/* Right: Crisp, Compact Action Buttons */}
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
               <button
+                type="button"
                 onClick={() =>
                   handleViewOrder(
                     activeBannerNotification.orderId,
                     activeBannerNotification.tableNumber
                   )
                 }
-                className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-emerald-800 font-black text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-emerald-900 font-bold text-xs shadow-xs transition-transform active:scale-95 flex items-center gap-1.5"
               >
                 <Eye className="w-3.5 h-3.5" />
-                <span>View Order</span>
+                <span>View</span>
               </button>
 
               <button
-                onClick={() => handlePrintNotificationSlip(activeBannerNotification)}
-                className="px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-extrabold text-xs shadow-xs transition-all active:scale-95 flex items-center gap-1.5 border border-white/30"
-                title="Print Kitchen Ready Slip"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Print Slip</span>
-              </button>
-
-              <button
+                type="button"
                 onClick={() => handleMarkServed(activeBannerNotification.id)}
-                className="px-3.5 py-2 rounded-xl bg-emerald-900 hover:bg-emerald-950 text-white font-black text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 border border-emerald-400/30"
+                className="px-3 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-black text-white font-bold text-xs shadow-xs transition-transform active:scale-95 flex items-center gap-1.5 border border-emerald-400/40"
               >
                 <Check className="w-3.5 h-3.5" />
                 <span>Mark Served</span>
               </button>
 
               <button
+                type="button"
                 onClick={handleDismissBanner}
-                className="p-2 rounded-xl hover:bg-white/20 text-white/80 hover:text-white transition-colors"
-                title="Acknowledge and dismiss banner"
+                className="p-1.5 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition-colors"
+                title="Dismiss"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -511,87 +497,124 @@ export const WaiterView: React.FC = () => {
         </div>
       )}
 
-      {/* 2. Waiter Profile, Header & Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#121824] p-4 sm:p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-sm shadow-md shadow-blue-500/20 shrink-0">
-            {activeWaiter.split(' ').map((n) => n[0]).join('').substring(0, 2)}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              {/* Waiter Switcher Dropdown */}
-              <select
-                value={activeWaiter}
-                onChange={(e) => setActiveWaiter(e.target.value)}
-                className="text-base font-extrabold text-slate-900 dark:text-white bg-transparent focus:outline-none cursor-pointer"
-              >
-                <option value={currentStaffName} className="dark:bg-slate-800">{currentStaffName} (My Station)</option>
-                <option value="All Staff" className="dark:bg-slate-800">All Waiters (Outlet Queue)</option>
-              </select>
-
-              {/* Online / Sync Badge */}
-              <div
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                  isOnline
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
-                    : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
-                }`}
-                title={isOnline ? 'Real-time connected with KDS' : 'Local sync mode'}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-                <span>{isOnline ? 'Live Sync' : 'Offline'}</span>
-              </div>
+      {/* 2. Waiter Profile, Header & Action Bar - Streamlined, Clean, Uncluttered */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#121824] p-3 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center justify-between gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+              {activeWaiter.split(' ').map((n) => n[0]).join('').substring(0, 2)}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {activeOutlet?.name || 'Main Dining Hall'} • Mobile Ordering & Kitchen Dispatch
-            </p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <select
+                  value={activeWaiter}
+                  onChange={(e) => setActiveWaiter(e.target.value)}
+                  className="text-sm font-extrabold text-slate-900 dark:text-white bg-transparent focus:outline-none cursor-pointer truncate max-w-[160px] sm:max-w-xs"
+                >
+                  <option value={currentStaffName} className="dark:bg-slate-800">{currentStaffName} (My Station)</option>
+                  <option value="All Staff" className="dark:bg-slate-800">All Waiters (Outlet Queue)</option>
+                </select>
+
+                <span
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold border shrink-0 ${
+                    isOnline
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                      : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                  <span>{isOnline ? 'Live' : 'Offline'}</span>
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 truncate">
+                {activeOutlet?.name || 'Main Branch'}
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Sound & Bell Icons for mobile */}
+          <div className="flex items-center gap-1 sm:hidden">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSoundEnabled((prev) => !prev);
+                if (!isSoundEnabled) playFoodReadyChime();
+              }}
+              className={`p-2 rounded-xl border transition-all ${
+                isSoundEnabled
+                  ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800'
+                  : 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:border-slate-700'
+              }`}
+              title={isSoundEnabled ? 'Sound On' : 'Sound Muted'}
+            >
+              {isSoundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsNotificationDrawerOpen(true)}
+              className="relative p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+              title="Notifications"
+            >
+              <Bell className="w-3.5 h-3.5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-600 text-white text-[9px] font-black flex items-center justify-center animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
-        {/* Action Controls & Notification Bell */}
-        <div className="flex items-center gap-2.5 overflow-x-auto shrink-0">
-          {/* Sound Toggle */}
-          <button
-            onClick={() => {
-              setIsSoundEnabled((prev) => !prev);
-              if (!isSoundEnabled) playFoodReadyChime();
-            }}
-            className={`p-2.5 rounded-2xl border transition-all ${
-              isSoundEnabled
-                ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800'
-                : 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:border-slate-700'
-            }`}
-            title={isSoundEnabled ? 'Chime sound enabled on food ready' : 'Sound muted'}
-          >
-            {isSoundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-          </button>
+        {/* Action Controls */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Sound & Bell for Desktop */}
+          <div className="hidden sm:flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSoundEnabled((prev) => !prev);
+                if (!isSoundEnabled) playFoodReadyChime();
+              }}
+              className={`p-2 rounded-xl border transition-all ${
+                isSoundEnabled
+                  ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800'
+                  : 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:border-slate-700'
+              }`}
+              title={isSoundEnabled ? 'Sound On' : 'Sound Muted'}
+            >
+              {isSoundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
 
-          {/* Notification History Bell Drawer Trigger */}
-          <button
-            onClick={() => setIsNotificationDrawerOpen(true)}
-            className="relative p-2.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-500 transition-all active:scale-95"
-            title="Open Food Ready Notifications History"
-          >
-            <Bell className="w-4 h-4 text-slate-700 dark:text-slate-300" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center animate-pulse shadow-xs">
-                {unreadCount}
-              </span>
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setIsNotificationDrawerOpen(true)}
+              className="relative p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-500 transition-all"
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-600 text-white text-[9px] font-black flex items-center justify-center animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+          </div>
 
           {/* Quick Order Actions */}
           <button
+            type="button"
             onClick={handleStartTakeaway}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs shadow-sm active:scale-95 transition-all shrink-0"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs active:scale-95 transition-transform"
           >
             <ShoppingBag className="w-3.5 h-3.5" />
             <span>+ Takeaway</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setIsDeliveryModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-sm active:scale-95 transition-all shrink-0"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs active:scale-95 transition-transform"
           >
             <Bike className="w-3.5 h-3.5" />
             <span>+ Delivery</span>
@@ -599,61 +622,65 @@ export const WaiterView: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* 3. Filter Toolbar & Search - Streamlined Horizontal Scroll */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         {/* Quick Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto text-xs font-bold scrollbar-none">
+        <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-bold scrollbar-none py-0.5">
           <button
+            type="button"
             onClick={() => setFilter('all')}
-            className={`px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap text-xs ${
               filter === 'all'
                 ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
             }`}
           >
-            All Tables ({tables.length})
+            All ({tables.length})
           </button>
           <button
+            type="button"
             onClick={() => setFilter('assigned')}
-            className={`px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap text-xs ${
               filter === 'assigned'
                 ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
             }`}
           >
-            My Assigned ({tables.filter((t) => t.assignedWaiter === activeWaiter).length})
+            Assigned ({tables.filter((t) => t.assignedWaiter === activeWaiter).length})
           </button>
           <button
+            type="button"
             onClick={() => setFilter('occupied')}
-            className={`px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap text-xs ${
               filter === 'occupied'
                 ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
             }`}
           >
             Occupied ({occupiedCount})
           </button>
           <button
+            type="button"
             onClick={() => setFilter('available')}
-            className={`px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap text-xs ${
               filter === 'available'
                 ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
             }`}
           >
-            Available ({availableCount})
+            Open ({availableCount})
           </button>
         </div>
 
         {/* Search */}
-        <div className="relative w-full sm:w-64">
+        <div className="relative w-full sm:w-60">
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search table or area..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-white dark:bg-[#121824] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none"
+            placeholder="Search table or section..."
+            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-white dark:bg-[#121824] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
           />
         </div>
       </div>
@@ -704,12 +731,21 @@ export const WaiterView: React.FC = () => {
                 )}
               </div>
 
-              {isOccupied && (
-                <div className="flex items-center gap-1 text-[10px] font-mono text-slate-500">
-                  <Clock className="w-3 h-3 text-amber-500" />
-                  <span>{t.orderDurationMinutes || 15}m elapsed</span>
-                </div>
-              )}
+              {isOccupied && (() => {
+                const tableOrder = orders.find(
+                  (o) => o.tableId === t.id || (t.currentOrderId && o.id === t.currentOrderId)
+                );
+                return (
+                  <div className="flex items-center justify-between text-[11px] font-mono mt-1">
+                    <span className="font-extrabold text-blue-600 dark:text-blue-400">
+                      {tableOrder ? formatPaise(tableOrder.totalPaise) : '₹0'}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {tableOrder ? `${tableOrder.items.length} item(s)` : `${t.orderDurationMinutes || 15}m`}
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">

@@ -80,7 +80,7 @@ export interface IDataAdapter {
   // Kitchen-to-Waiter Food Ready Notifications
   getKitchenNotifications(outletId?: string, waiterName?: string): Promise<KitchenNotification[]>;
   createKitchenNotification(notification: KitchenNotification): Promise<KitchenNotification>;
-  markKitchenNotificationRead(id: string): Promise<KitchenNotification>;
+  markKitchenNotificationRead(id: string): Promise<KitchenNotification | null>;
   markKitchenNotificationServed(id: string, servedBy?: string): Promise<{ notification: KitchenNotification; order?: Order }>;
 
   // Inventory & Stock Ledger

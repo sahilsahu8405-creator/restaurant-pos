@@ -146,7 +146,23 @@ export const TableWorkspace: React.FC<TableWorkspaceProps> = ({
 
   useEffect(() => {
     loadData();
-  }, [table, activeOutlet]);
+
+    // Instant live sync listener: updates running bill immediately when items are added, updated, or fired
+    const unsubscribe = localRepository.subscribe(() => {
+      loadData();
+    });
+
+    const handleOpChange = () => {
+      loadData();
+    };
+
+    window.addEventListener('restohub:operational-change', handleOpChange);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('restohub:operational-change', handleOpChange);
+    };
+  }, [table, activeOutlet, initialOrderId]);
 
   // Create Order if Table is Available and First Item is added
   const getOrCreateOrder = async (): Promise<Order> => {

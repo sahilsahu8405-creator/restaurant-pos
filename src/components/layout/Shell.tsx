@@ -80,6 +80,7 @@ export const Shell: React.FC<ShellProps> = ({
 
   // Workspace selector state
   const [isWorkspaceSelectorOpen, setIsWorkspaceSelectorOpen] = useState(false);
+  const [isConfirmSignOutOpen, setIsConfirmSignOutOpen] = useState(false);
 
   // Auth Modals state
   const [isInvitationOpen, setIsInvitationOpen] = useState(false);
@@ -301,8 +302,8 @@ export const Shell: React.FC<ShellProps> = ({
             </div>
 
             <button
-              onClick={logout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold transition-colors"
+              onClick={() => setIsConfirmSignOutOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-300 dark:hover:border-rose-900 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-bold transition-all"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Sign Out</span>
@@ -318,6 +319,43 @@ export const Shell: React.FC<ShellProps> = ({
           isOpen={isWorkspaceSelectorOpen}
           onClose={() => setIsWorkspaceSelectorOpen(false)}
         />
+
+        {/* Sign Out Confirmation Modal to prevent accidental logouts */}
+        {isConfirmSignOutOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+            <div className="w-full max-w-sm bg-white dark:bg-[#121824] rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                  <LogOut className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Sign Out?</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Are you sure you want to exit your active shift?</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmSignOutOpen(false)}
+                  className="py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Stay Working
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsConfirmSignOutOpen(false);
+                    logout();
+                  }}
+                  className="py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors shadow-sm shadow-rose-600/30"
+                >
+                  Yes, Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -379,8 +417,8 @@ export const Shell: React.FC<ShellProps> = ({
             </div>
 
             <button
-              onClick={logout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold transition-colors"
+              onClick={() => setIsConfirmSignOutOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-300 dark:hover:border-rose-900 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-bold transition-all"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>{kdsDevice ? 'Disconnect Terminal' : 'Sign Out'}</span>
@@ -396,6 +434,49 @@ export const Shell: React.FC<ShellProps> = ({
           isOpen={isWorkspaceSelectorOpen}
           onClose={() => setIsWorkspaceSelectorOpen(false)}
         />
+
+        {/* Confirmation Modal for KDS / Kitchen */}
+        {isConfirmSignOutOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+            <div className="w-full max-w-sm bg-white dark:bg-[#121824] rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                  <LogOut className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                    {kdsDevice ? 'Disconnect Terminal?' : 'Sign Out?'}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {kdsDevice
+                      ? 'Are you sure you want to disconnect this Kitchen display terminal?'
+                      : 'Are you sure you want to sign out of the kitchen display?'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmSignOutOpen(false)}
+                  className="py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Stay Connected
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsConfirmSignOutOpen(false);
+                    logout();
+                  }}
+                  className="py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors shadow-sm shadow-rose-600/30"
+                >
+                  {kdsDevice ? 'Yes, Disconnect' : 'Yes, Sign Out'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
