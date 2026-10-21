@@ -158,25 +158,26 @@ export function getEffectiveReceiptConfig(
 ): ReceiptConfig {
   const base = { ...DEFAULT_RECEIPT_CONFIG };
 
-  // Sync paper width from existing setting if present
-  if (settings?.receiptPaperWidth) {
-    base.paperWidth = settings.receiptPaperWidth;
-  }
-  if (settings?.receiptFooter) {
-    base.thankYouMessage = settings.receiptFooter;
-  }
-
   const restaurantConfig = (settings as any)?.receiptConfig || {};
   const branchOverrides =
     outletId && (settings as any)?.branchReceiptConfigs?.[outletId]
       ? (settings as any).branchReceiptConfigs[outletId]
       : {};
 
-  return {
+  const merged = {
     ...base,
     ...restaurantConfig,
     ...branchOverrides,
   };
+
+  if (settings?.receiptPaperWidth) {
+    merged.paperWidth = settings.receiptPaperWidth;
+  }
+  if (settings?.receiptFooter) {
+    merged.thankYouMessage = settings.receiptFooter;
+  }
+
+  return merged;
 }
 
 /**

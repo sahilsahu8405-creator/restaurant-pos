@@ -486,11 +486,13 @@ export const TableWorkspace: React.FC<TableWorkspaceProps> = ({
 
           {activeOrder && (
             <button
+              type="button"
               onClick={handlePrintReceipt}
-              className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors"
-              title="Print Receipt Directly"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-xs transition-all active:scale-95 shrink-0"
+              title="Print Bill Directly"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print Bill</span>
             </button>
           )}
         </div>

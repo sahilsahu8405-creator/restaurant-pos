@@ -25,6 +25,8 @@ import {
   WifiOff,
   User,
   Check,
+  Printer,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -33,6 +35,7 @@ import { subscribeToOperationalChanges, isSameOutlet } from '../../services/supa
 import { DiningTable, KitchenNotification, Order } from '../../types';
 import { formatPaise } from '../../utils/currency';
 import { TableWorkspace } from '../tables/TableWorkspace';
+import { printService } from '../../services/printService';
 import {
   playFoodReadyChime,
   subscribeToCrossTabEvents,
@@ -48,11 +51,14 @@ export const WaiterView: React.FC = () => {
     startNewTakeawayOrder,
     startNewDeliveryOrder,
     setCurrentView,
+    restaurant,
+    settings,
   } = useApp();
 
   const [tables, setTables] = useState<DiningTable[]>([]);
   const [selectedTable, setSelectedTable] = useState<DiningTable | null>(null);
   const [selectedWorkspaceOrderId, setSelectedWorkspaceOrderId] = useState<string | undefined>(undefined);
+  const [printingTableId, setPrintingTableId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'assigned' | 'occupied' | 'available'>('all');
   const [search, setSearch] = useState('');
 
@@ -269,6 +275,61 @@ export const WaiterView: React.FC = () => {
     }
   };
 
+  // Direct 1-tap bill printing for waiters from table card
+  const handleQuickPrintTableBill = async (table: DiningTable, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!activeOutlet) return;
+
+    setPrintingTableId(table.id);
+    try {
+      let targetOrder: Order | null = null;
+      if (table.currentOrderId) {
+        targetOrder = await localRepository.getOrderById(table.currentOrderId);
+      }
+      if (!targetOrder || targetOrder.status === 'completed' || targetOrder.status === 'cancelled') {
+        const allOrders = await localRepository.getOrders(activeOutlet.id);
+        targetOrder = allOrders.find(
+          (o) => o.tableId === table.id && o.status !== 'completed' && o.status !== 'cancelled'
+        ) || null;
+      }
+
+      if (!targetOrder) {
+        addToast(`No active order found for Table ${table.tableNumber}`, 'warning');
+        return;
+      }
+
+      addToast(`Printing bill for Table ${table.tableNumber}...`, 'info');
+      const res = await printService.printReceipt(targetOrder, settings, restaurant, activeOutlet);
+      if (res.success) {
+        addToast(`✅ Printed Bill for Table ${table.tableNumber} (${settings?.receiptPaperWidth || '80mm'})`, 'success');
+      } else {
+        addToast(`Print bill: ${res.error || res.message}`, 'warning');
+      }
+    } catch (err: any) {
+      addToast(`Failed to print bill: ${err?.message || 'Error'}`, 'error');
+    } finally {
+      setPrintingTableId(null);
+    }
+  };
+
+  // Direct slip printing from kitchen ready notification
+  const handlePrintNotificationSlip = async (notif: KitchenNotification) => {
+    if (!activeOutlet) return;
+    try {
+      const order = await localRepository.getOrderById(notif.orderId);
+      if (order) {
+        const res = await printService.printReceipt(order, settings, restaurant, activeOutlet);
+        if (res.success) {
+          addToast(`Printed slip for Order #${notif.orderNumber}`, 'success');
+        } else {
+          addToast(`Print slip: ${res.error || res.message}`, 'warning');
+        }
+      }
+    } catch (err: any) {
+      addToast('Could not print slip for notification', 'error');
+    }
+  };
+
   const handleSelectTable = (table: DiningTable) => {
     setSelectedWorkspaceOrderId(undefined);
     setSelectedTable(table);
@@ -419,6 +480,15 @@ export const WaiterView: React.FC = () => {
               >
                 <Eye className="w-3.5 h-3.5" />
                 <span>View Order</span>
+              </button>
+
+              <button
+                onClick={() => handlePrintNotificationSlip(activeBannerNotification)}
+                className="px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-extrabold text-xs shadow-xs transition-all active:scale-95 flex items-center gap-1.5 border border-white/30"
+                title="Print Kitchen Ready Slip"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print Slip</span>
               </button>
 
               <button
@@ -642,20 +712,40 @@ export const WaiterView: React.FC = () => {
               )}
 
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
-                    hasFoodReadyAlert
-                      ? 'bg-emerald-600 text-white'
-                      : isOccupied
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
-                  }`}
-                >
-                  {hasFoodReadyAlert ? 'Food Ready' : isOccupied ? 'Occupied' : 'Open'}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
+                      hasFoodReadyAlert
+                        ? 'bg-emerald-600 text-white'
+                        : isOccupied
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
+                    }`}
+                  >
+                    {hasFoodReadyAlert ? 'Food Ready' : isOccupied ? 'Occupied' : 'Open'}
+                  </span>
+                </div>
 
-                <div className="p-1 rounded-md text-slate-400 hover:text-blue-600">
-                  <ChevronRight className="w-4 h-4" />
+                <div className="flex items-center gap-1.5">
+                  {isOccupied && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleQuickPrintTableBill(t, e)}
+                      disabled={printingTableId === t.id}
+                      className="px-2 py-0.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[10px] flex items-center gap-1 shadow-xs active:scale-95 transition-all z-10 disabled:opacity-50"
+                      title={`Print Bill for Table ${t.tableNumber}`}
+                    >
+                      {printingTableId === t.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Printer className="w-3 h-3" />
+                      )}
+                      <span>Bill</span>
+                    </button>
+                  )}
+                  <div className="p-1 rounded-md text-slate-400 hover:text-blue-600">
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
                 </div>
               </div>
             </div>

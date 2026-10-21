@@ -31,6 +31,8 @@ import {
   AlertTriangle,
   Image as ImageIcon,
   Users,
+  Copy,
+  Zap,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -1661,27 +1663,38 @@ export const SettingsView: React.FC = () => {
                         {/* Paper Size: 58 mm / 80 mm / A4 */}
                         <div>
                           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                            Paper Size
+                            Paper Size & Format
                           </label>
                           <div className="grid grid-cols-3 gap-2">
                             {[
-                              { id: '58mm', label: '58 mm' },
-                              { id: '80mm', label: '80 mm' },
-                              { id: 'a4', label: 'A4' },
+                              { id: '58mm', label: '58 mm', sub: 'Compact Roll' },
+                              { id: '80mm', label: '80 mm', sub: 'Standard Roll' },
+                              { id: 'a4', label: 'A4 Page', sub: 'HP / InkTank / Laser' },
                             ].map((size) => {
                               const active = (formData.receiptPaperWidth || '80mm') === size.id;
                               return (
                                 <button
                                   key={size.id}
                                   type="button"
-                                  onClick={() => setFormData({ ...formData, receiptPaperWidth: size.id as any })}
-                                  className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border ${
+                                  onClick={() =>
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      receiptPaperWidth: size.id as any,
+                                      receiptConfig: prev.receiptConfig
+                                        ? { ...prev.receiptConfig, paperWidth: size.id as any }
+                                        : undefined,
+                                    }))
+                                  }
+                                  className={`py-2 px-2 rounded-xl text-center transition-all border ${
                                     active
                                       ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                                       : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
                                   }`}
                                 >
-                                  {size.label}
+                                  <div className="text-xs font-black">{size.label}</div>
+                                  <div className={`text-[10px] mt-0.5 ${active ? 'text-blue-100' : 'text-slate-400'}`}>
+                                    {size.sub}
+                                  </div>
                                 </button>
                               );
                             })}
@@ -1884,6 +1897,54 @@ export const SettingsView: React.FC = () => {
                           <span>{isTestingKot ? 'Sending Print Job...' : 'Test Print'}</span>
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* DIRECT SILENT PRINTING (SKIP PREVIEW DIALOG) */}
+                  <div className="bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-slate-50 dark:from-blue-950/20 dark:via-indigo-950/10 dark:to-slate-900/40 rounded-2xl border border-blue-200/80 dark:border-blue-900/50 p-5 space-y-3.5 shadow-xs">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
+                          <Zap className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                            <span>Direct Silent Printing (No Preview Popups)</span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                              Instant Counter Mode
+                            </span>
+                          </h4>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
+                            To send bills & invoices straight to your printer (e.g. HP Smart Tank, Thermal POS) without clicking "Print" in the browser preview dialog every time, launch your counter browser in <strong>Kiosk Silent Print Mode</strong>:
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-blue-100 dark:border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-700 dark:text-slate-300">
+                          Windows Terminal / POS Counter Launch Shortcut:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cmd = 'chrome.exe --kiosk-printing --app=https://restaurant-pos-gilt-seven.vercel.app/app';
+                            navigator.clipboard.writeText(cmd);
+                            addToast('Copied Kiosk Mode shortcut command to clipboard!', 'success');
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 font-extrabold text-[11px] flex items-center gap-1.5 transition-colors border border-blue-200 dark:border-blue-800"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy Command</span>
+                        </button>
+                      </div>
+                      <code className="block p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-[11px] select-all break-all border border-slate-200 dark:border-slate-700">
+                        chrome.exe --kiosk-printing --app=https://restaurant-pos-gilt-seven.vercel.app/app
+                      </code>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        💡 <strong>How it works:</strong> Running Chrome or Edge with <code>--kiosk-printing</code> bypasses the print dialog completely and sends prints straight to your Windows default printer in 0.1 seconds.
+                      </p>
                     </div>
                   </div>
 

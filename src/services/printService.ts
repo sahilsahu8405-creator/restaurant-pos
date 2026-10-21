@@ -1,5 +1,6 @@
 import { Order, KOTTicket, Restaurant, Outlet, RestaurantSettings, PrintResult, PrinterConnectionType } from '../types';
 import { generateReceiptText, generateKotText, generateEscPosBuffer, bufferToBase64 } from '../utils/escposGenerator';
+import { generateA4InvoiceHtml } from '../utils/a4InvoiceGenerator';
 
 class PrintService {
   private activeSerialPort: any = null;
@@ -26,6 +27,11 @@ class PrintService {
     const plainText = generateReceiptText(order, settings, restaurant, outlet, paperWidth, customConfig);
     const escposBytes = generateEscPosBuffer(plainText, true, true);
 
+    // Full Executive A4 Tax Invoice when paper format is A4
+    const a4Html = paperWidth === 'a4'
+      ? generateA4InvoiceHtml(order, settings, restaurant, outlet, customConfig)
+      : undefined;
+
     try {
       const result = await this.dispatchToPrinter({
         jobId,
@@ -37,6 +43,7 @@ class PrintService {
         copies,
         plainText,
         escposBytes,
+        a4Html,
         orderId: order.id,
         orderNumber: order.orderNumber,
         isReprint,
@@ -101,7 +108,7 @@ class PrintService {
         connectionType,
         isSilent: false,
         message: `Failed to print KOT on ${printerName}`,
-        error: err.message || 'KOT printer communication error',
+        error: err.message || 'Printer communication error',
       };
     }
   }
@@ -116,6 +123,69 @@ class PrintService {
     endpoint: string = 'http://127.0.0.1:9100/print'
   ): Promise<PrintResult> {
     const jobId = `job-test-${Date.now()}`;
+    const dateStr = new Date().toLocaleString('en-IN');
+
+    let a4Html: string | undefined;
+    if (paperWidth === 'a4') {
+      a4Html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>RestoHub A4 Printer Diagnostic Test</title>
+            <style>
+              @page {
+                size: A4 portrait;
+                margin: 20mm;
+              }
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                color: #111827;
+                padding: 20px;
+                line-height: 1.5;
+              }
+              .box {
+                border: 2px solid #2563eb;
+                border-radius: 12px;
+                padding: 24px;
+                max-width: 170mm;
+                margin: 0 auto;
+              }
+              h1 { color: #2563eb; margin: 0 0 8px 0; font-size: 22px; }
+              .badge {
+                display: inline-block;
+                background: #dcfce7;
+                color: #15803d;
+                font-weight: 800;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: 12px;
+              }
+              table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+              td { padding: 8px; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+              td.label { font-weight: 700; width: 140px; color: #4b5563; }
+              .footer { margin-top: 24px; font-size: 11px; color: #6b7280; text-align: center; }
+            </style>
+          </head>
+          <body>
+            <div class="box">
+              <span class="badge">HARDWARE STATUS: OK</span>
+              <h1>RestoHub A4 Printer Test Page</h1>
+              <p style="font-size: 13px; color: #4b5563;">This page confirms your office / deskjet / laser printer is configured and printing properly from RestoHub POS.</p>
+              <table>
+                <tr><td class="label">Printer Name:</td><td><strong>${escapeHtml(printerName)}</strong></td></tr>
+                <tr><td class="label">Paper Format:</td><td><strong>A4 Full-Page (210mm × 297mm)</strong></td></tr>
+                <tr><td class="label">Connection:</td><td><strong>${escapeHtml(connectionType.toUpperCase())}</strong></td></tr>
+                <tr><td class="label">Date & Time:</td><td>${dateStr}</td></tr>
+                <tr><td class="label">Output Quality:</td><td>High Resolution Full Page Layout (HP / Epson / Canon Compatible)</td></tr>
+              </table>
+              <div class="footer">RestoHub Restaurant Operating System • Direct Hardware Spooler Active</div>
+            </div>
+          </body>
+        </html>
+      `;
+    }
+
     const lines = [
       '================================',
       '      RESTOHUB PRINTER TEST     ',
@@ -123,7 +193,7 @@ class PrintService {
       `Printer : ${printerName}`,
       `Format  : ${paperWidth.toUpperCase()}`,
       `Connect : ${connectionType.toUpperCase()}`,
-      `Date    : ${new Date().toLocaleString('en-IN')}`,
+      `Date    : ${dateStr}`,
       '--------------------------------',
       '12345678901234567890123456789012',
       'ABCDEFGHIJKLmnopqrstuvwxyz!@#$%^',
@@ -145,6 +215,7 @@ class PrintService {
       copies: 1,
       plainText,
       escposBytes,
+      a4Html,
     });
   }
 
@@ -179,35 +250,37 @@ class PrintService {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-        const res = await fetch(pingUrl, {
+        const response = await fetch(pingUrl, {
           method: 'GET',
           signal: controller.signal,
-          headers: { Accept: 'application/json' },
-        }).catch(() => null);
-
+        });
         clearTimeout(timeoutId);
 
-        if (res && res.ok) {
-          const data = await res.json().catch(() => ({}));
-          return { online: true, message: 'Local silent print service is online and ready', details: data };
+        if (response.ok) {
+          const data = await response.json();
+          return {
+            online: true,
+            message: `Printer agent connected (${data.printers?.length || 1} printer detected)`,
+            details: data,
+          };
         }
+      } catch {
+        // Universal print engine serves as seamless backup
         return {
           online: true,
-          message: 'Universal Direct Print Ready (Automatic System Fallback Active)',
-        };
-      } catch (err: any) {
-        return {
-          online: true,
-          message: 'Universal Direct Print Ready (Automatic System Fallback Active)',
+          message: 'Direct Spooler Active (Printing directly via System Driver / AirPrint / Bluetooth)',
         };
       }
     }
 
-    return { online: true, message: 'Universal Direct Print Ready' };
+    return {
+      online: true,
+      message: 'Direct Print Engine Ready',
+    };
   }
 
   /**
-   * Internal routing to the selected hardware channel - Universal execution everywhere
+   * Helper to dispatch payload to target printer with automatic universal fallback
    */
   private async dispatchToPrinter(params: {
     jobId: string;
@@ -219,6 +292,7 @@ class PrintService {
     copies: number;
     plainText: string;
     escposBytes: Uint8Array;
+    a4Html?: string;
     orderId?: string;
     orderNumber?: string;
     isReprint?: boolean;
@@ -233,22 +307,31 @@ class PrintService {
       copies,
       plainText,
       escposBytes,
+      a4Html,
     } = params;
 
     const isElectron = typeof window !== 'undefined' && !!(window as any).restohubNative?.isElectron;
     const isLocalhost = Boolean(endpoint && (endpoint.includes('127.0.0.1') || endpoint.includes('localhost')));
 
+    // Helper to print via offscreen engine (rich A4 HTML or thermal receipt)
+    const runOffscreenPrint = () => {
+      if (paperWidth === 'a4' && a4Html) {
+        this.executeOffscreenBrowserPrint(a4Html, 'a4', true);
+      } else {
+        this.executeOffscreenBrowserPrint(plainText, paperWidth, false);
+      }
+    };
+
     // 1. WEB BROWSER & MOBILE APP (Universal Direct Printing Everywhere!)
-    // Works seamlessly on Chrome, Edge, Safari, Android Phones/Tablets, iPads, and Laptops without any local daemon requirement
     if (!isElectron && (connectionType === 'browser' || isLocalhost)) {
-      this.executeOffscreenBrowserPrint(plainText, paperWidth);
+      runOffscreenPrint();
       return {
         success: true,
         jobId,
-        printerName: printerName || 'Thermal Receipt Printer',
+        printerName: printerName || 'Receipt Printer',
         connectionType: 'browser',
         isSilent: false,
-        message: `Receipt dispatched directly to ${printerName || 'printer'} (${paperWidth})`,
+        message: `Dispatched directly to ${printerName || 'printer'} (${paperWidth})`,
       };
     }
 
@@ -261,6 +344,7 @@ class PrintService {
         paperWidth,
         copies,
         plainText,
+        a4Html,
         escposBase64: bufferToBase64(escposBytes),
         timestamp: new Date().toISOString(),
       };
@@ -290,14 +374,13 @@ class PrintService {
           message: `Printed directly to ${printerName} (${paperWidth})`,
         };
       } catch (fetchErr: any) {
-        // If local agent isn't running, AUTOMATICALLY fallback to universal direct print so user ALWAYS gets their printout!
         console.info('Local agent unavailable, executing universal direct print:', fetchErr);
-        this.executeOffscreenBrowserPrint(plainText, paperWidth);
+        runOffscreenPrint();
 
         return {
           success: true,
           jobId,
-          printerName: printerName || 'Thermal Printer',
+          printerName: printerName || 'Receipt Printer',
           connectionType: 'browser',
           isSilent: false,
           message: `Dispatched directly to ${printerName || 'printer'} (${paperWidth})`,
@@ -333,8 +416,7 @@ class PrintService {
         }
       }
 
-      // Automatic fallback to universal print
-      this.executeOffscreenBrowserPrint(plainText, paperWidth);
+      runOffscreenPrint();
       return {
         success: true,
         jobId,
@@ -346,7 +428,7 @@ class PrintService {
     }
 
     // 4. BROWSER / SYSTEM PRINT ENGINE
-    this.executeOffscreenBrowserPrint(plainText, paperWidth);
+    runOffscreenPrint();
     return {
       success: true,
       jobId,
@@ -360,7 +442,7 @@ class PrintService {
   /**
    * Universal Offscreen Printing Engine (Seamless on Desktop Web, Mobile App, Android, iOS, Windows, Mac)
    */
-  private executeOffscreenBrowserPrint(text: string, paperWidth: '58mm' | '80mm' | 'a4') {
+  private executeOffscreenBrowserPrint(content: string, paperWidth: '58mm' | '80mm' | 'a4', isFullHtml: boolean = false) {
     if (typeof document === 'undefined') return;
 
     const iframe = document.createElement('iframe');
@@ -386,40 +468,45 @@ class PrintService {
     const fontPx = paperWidth === '58mm' ? '11px' : '12px';
 
     doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>RestoHub Receipt</title>
-          <style>
-            @media print {
-              @page {
-                size: ${paperWidth === 'a4' ? 'A4 portrait' : `${widthMm} auto`};
-                margin: 0mm;
+    if (isFullHtml) {
+      doc.write(content);
+    } else {
+      doc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>RestoHub Receipt</title>
+            <style>
+              @media print {
+                @page {
+                  size: ${paperWidth === 'a4' ? 'A4 portrait' : `${widthMm} auto`};
+                  margin: 0mm;
+                }
+                body {
+                  margin: 0mm;
+                  padding: ${paperWidth === '58mm' ? '2mm' : '4mm'};
+                }
               }
               body {
-                margin: 0mm;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: ${fontPx};
+                font-weight: 600;
+                line-height: 1.25;
+                margin: 0;
                 padding: ${paperWidth === '58mm' ? '2mm' : '4mm'};
+                color: #000;
+                background: #fff;
+                width: ${widthMm};
+                white-space: pre-wrap;
+                word-break: break-word;
               }
-            }
-            body {
-              font-family: 'Courier New', Courier, monospace;
-              font-size: ${fontPx};
-              font-weight: 600;
-              line-height: 1.25;
-              margin: 0;
-              padding: ${paperWidth === '58mm' ? '2mm' : '4mm'};
-              color: #000;
-              background: #fff;
-              width: ${widthMm};
-              white-space: pre-wrap;
-              word-break: break-word;
-            }
-          </style>
-        </head>
-        <body>${escapeHtml(text)}</body>
-      </html>
-    `);
+            </style>
+          </head>
+          <body>${escapeHtml(content)}</body>
+        </html>
+      `);
+    }
     doc.close();
 
     const triggerPrint = () => {
@@ -433,11 +520,11 @@ class PrintService {
           if (iframe.parentNode) {
             document.body.removeChild(iframe);
           }
-        }, 2500);
+        }, 3000);
       }
     };
 
-    setTimeout(triggerPrint, 150);
+    setTimeout(triggerPrint, 200);
   }
 }
 
