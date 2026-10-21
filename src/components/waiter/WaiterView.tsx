@@ -27,6 +27,7 @@ import {
   Check,
   Printer,
   Loader2,
+  LogOut,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -62,8 +63,9 @@ export const WaiterView: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'assigned' | 'occupied' | 'available'>('all');
   const [search, setSearch] = useState('');
 
-  const { profile, membership } = useAuth();
+  const { profile, membership, logout } = useAuth();
   const currentStaffName = profile?.fullName || 'Waiter';
+  const [isConfirmSignOutOpen, setIsConfirmSignOutOpen] = useState(false);
 
   // Active Waiter Profile
   const [activeWaiter, setActiveWaiter] = useState<string>(currentStaffName);
@@ -532,7 +534,7 @@ export const WaiterView: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Sound & Bell Icons for mobile */}
+          {/* Quick Sound, Bell & Sign Out for mobile */}
           <div className="flex items-center gap-1 sm:hidden">
             <button
               type="button"
@@ -562,6 +564,15 @@ export const WaiterView: React.FC = () => {
                   {unreadCount}
                 </span>
               )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsConfirmSignOutOpen(true)}
+              className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-all shadow-xs"
+              title="Sign Out of Shift"
+            >
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -598,6 +609,16 @@ export const WaiterView: React.FC = () => {
                   {unreadCount}
                 </span>
               )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsConfirmSignOutOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-all text-xs font-bold shadow-xs"
+              title="Sign Out of Shift"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
             </button>
           </div>
 
@@ -1047,6 +1068,43 @@ export const WaiterView: React.FC = () => {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Sign Out Confirmation Modal */}
+      {isConfirmSignOutOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white dark:bg-[#121824] rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <LogOut className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Sign Out?</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Are you sure you want to exit your active shift?</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsConfirmSignOutOpen(false)}
+                className="py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                Stay Working
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsConfirmSignOutOpen(false);
+                  logout();
+                }}
+                className="py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors shadow-sm shadow-rose-600/30"
+              >
+                Yes, Sign Out
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

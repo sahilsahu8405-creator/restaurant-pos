@@ -219,14 +219,14 @@ export const Sidebar: React.FC = () => {
       <div className="p-3 border-t border-slate-200 dark:border-slate-800 space-y-2 shrink-0">
         <div
           className={`p-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 flex items-center ${
-            isCollapsed ? 'justify-center' : 'justify-between'
+            isCollapsed && !isMobileMenuOpen ? 'flex-col gap-2' : 'justify-between'
           }`}
         >
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
               {((profile?.fullName || user?.email || 'AM').substring(0, 2)).toUpperCase()}
             </div>
-            {!isCollapsed && (
+            {(!isCollapsed || isMobileMenuOpen) && (
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
                   {profile?.fullName || user?.email?.split('@')[0] || 'Staff User'}
@@ -237,16 +237,30 @@ export const Sidebar: React.FC = () => {
               </div>
             )}
           </div>
-          {!isCollapsed && (
-            <button
-              onClick={logout}
-              title="Sign Out of RestoHub"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              logout();
+            }}
+            title="Sign Out of RestoHub"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
+
+        {isMobileMenuOpen && (
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              logout();
+            }}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-xs font-bold border border-rose-200 dark:border-rose-900/60 transition-colors shadow-xs"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out of Shift</span>
+          </button>
+        )}
 
         {/* Separated Platform Administration Workspace Switcher (Visible only to Platform Super Admins) */}
         {isSuperAdmin && (!isCollapsed ? (

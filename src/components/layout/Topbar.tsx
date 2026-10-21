@@ -20,6 +20,8 @@ import {
   Clock,
   Layers,
   Building2,
+  LogOut,
+  User,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -33,7 +35,9 @@ interface TopbarProps {
 }
 
 export const Topbar: React.FC<TopbarProps> = ({ onOpenWorkspaceSelector }) => {
-  const { role, authorizedOutletId, membership, memberships } = useAuth();
+  const { role, authorizedOutletId, membership, memberships, profile, user, logout } = useAuth();
+  const [isConfirmSignOutOpen, setIsConfirmSignOutOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const {
     isDark,
     toggleTheme,
@@ -581,6 +585,76 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenWorkspaceSelector }) => {
           >
             {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
           </button>
+
+          {/* User Profile & Quick Sign Out */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+              className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Account & Sign Out"
+            >
+              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                {((profile?.fullName || user?.email || 'U').substring(0, 2)).toUpperCase()}
+              </div>
+              <div className="hidden sm:flex flex-col text-left leading-tight">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate max-w-[100px]">
+                  {profile?.fullName || user?.email?.split('@')[0] || 'User'}
+                </span>
+                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold capitalize">
+                  {role}
+                </span>
+              </div>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
+            </button>
+
+            {/* Profile Dropdown Menu */}
+            {isProfileMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsProfileMenuOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white dark:bg-[#121824] border border-slate-200 dark:border-slate-800 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-100 text-xs">
+                  <div className="p-2.5 border-b border-slate-100 dark:border-slate-800/80 mb-1">
+                    <p className="font-extrabold text-slate-900 dark:text-white truncate">
+                      {profile?.fullName || user?.email}
+                    </p>
+                    <p className="text-[11px] text-slate-400 truncate mt-0.5">{user?.email}</p>
+                    <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                      {role}
+                    </span>
+                  </div>
+
+                  {memberships.length > 1 && onOpenWorkspaceSelector && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        onOpenWorkspaceSelector();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold transition-colors"
+                    >
+                      <Store className="w-4 h-4 text-blue-500" />
+                      <span>Switch Restaurant</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      setIsConfirmSignOutOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -676,6 +750,43 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenWorkspaceSelector }) => {
         isOpen={isNotificationDrawerOpen}
         onClose={() => setIsNotificationDrawerOpen(false)}
       />
+
+      {/* Sign Out Confirmation Modal */}
+      {isConfirmSignOutOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white dark:bg-[#121824] rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <LogOut className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Sign Out?</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Are you sure you want to exit your session?</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsConfirmSignOutOpen(false)}
+                className="py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                Stay Logged In
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsConfirmSignOutOpen(false);
+                  logout();
+                }}
+                className="py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors shadow-sm shadow-rose-600/30"
+              >
+                Yes, Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

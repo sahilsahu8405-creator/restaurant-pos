@@ -251,32 +251,33 @@ export const Shell: React.FC<ShellProps> = ({
   if (role === 'waiter') {
     return (
       <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100">
-        <header className="h-14 px-4 bg-white dark:bg-[#121824] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+        <header className="h-14 px-3 sm:px-4 bg-white dark:bg-[#121824] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 shadow-xs gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
               <Smartphone className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-sm text-slate-900 dark:text-white">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
                   {membership?.restaurantName || restaurant?.name || 'RestoHub'}
                 </span>
-                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                  Waiter App
+                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shrink-0">
+                  Waiter
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                <Building2 className="w-3 h-3 text-slate-400" />
-                <span>{activeOutlet?.name || 'Assigned Branch'}</span>
+              <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                <Building2 className="w-3 h-3 text-slate-400 shrink-0" />
+                <span className="truncate">{activeOutlet?.name || 'Assigned Branch'}</span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {memberships.length > 1 && (
               <button
+                type="button"
                 onClick={() => setIsWorkspaceSelectorOpen(true)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <Store className="w-3.5 h-3.5 text-blue-500" />
                 <span>Switch Restaurant</span>
@@ -285,15 +286,16 @@ export const Shell: React.FC<ShellProps> = ({
             )}
 
             <button
+              type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors shrink-0"
               title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
             </button>
 
             <div className="hidden sm:flex flex-col text-right">
-              <span className="text-xs font-bold text-slate-900 dark:text-white">
+              <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[120px]">
                 {profile?.fullName || user?.email}
               </span>
               <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
@@ -302,8 +304,9 @@ export const Shell: React.FC<ShellProps> = ({
             </div>
 
             <button
+              type="button"
               onClick={() => setIsConfirmSignOutOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-300 dark:hover:border-rose-900 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-bold transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 dark:hover:text-white text-xs font-bold transition-all shrink-0 shadow-xs"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Sign Out</span>
@@ -364,34 +367,35 @@ export const Shell: React.FC<ShellProps> = ({
   if (role === 'kitchen') {
     return (
       <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-100 dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100">
-        <header className="h-14 px-4 bg-white dark:bg-[#121824] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
+        <header className="h-14 px-3 sm:px-4 bg-white dark:bg-[#121824] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 shadow-xs gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs shrink-0">
               {kdsDevice ? <Tv className="w-4 h-4" /> : <ChefHat className="w-4 h-4" />}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-sm text-slate-900 dark:text-white">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
                   {kdsDevice
                     ? (kdsDevice.restaurantName ? `${kdsDevice.deviceName} • ${kdsDevice.restaurantName}` : kdsDevice.deviceName)
                     : membership?.restaurantName || 'Kitchen Display System'}
                 </span>
-                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
-                  {kdsDevice ? 'Paired Terminal' : 'Kitchen Staff'}
+                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 shrink-0">
+                  {kdsDevice ? 'Paired' : 'Kitchen'}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                <Building2 className="w-3 h-3 text-slate-400" />
-                <span>{activeOutlet?.name || kdsDevice?.outletName || 'Assigned Kitchen Station'}</span>
+              <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                <Building2 className="w-3 h-3 text-slate-400 shrink-0" />
+                <span className="truncate">{activeOutlet?.name || kdsDevice?.outletName || 'Assigned Kitchen Station'}</span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {memberships.length > 1 && !kdsDevice && (
               <button
+                type="button"
                 onClick={() => setIsWorkspaceSelectorOpen(true)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <Store className="w-3.5 h-3.5 text-purple-500" />
                 <span>Switch Restaurant</span>
@@ -400,15 +404,16 @@ export const Shell: React.FC<ShellProps> = ({
             )}
 
             <button
+              type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors shrink-0"
               title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
             </button>
 
             <div className="hidden sm:flex flex-col text-right">
-              <span className="text-xs font-bold text-slate-900 dark:text-white">
+              <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[120px]">
                 {kdsDevice ? kdsDevice.deviceName : profile?.fullName || user?.email}
               </span>
               <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">
@@ -417,11 +422,12 @@ export const Shell: React.FC<ShellProps> = ({
             </div>
 
             <button
+              type="button"
               onClick={() => setIsConfirmSignOutOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-300 dark:hover:border-rose-900 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-bold transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 dark:hover:text-white text-xs font-bold transition-all shrink-0 shadow-xs"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>{kdsDevice ? 'Disconnect Terminal' : 'Sign Out'}</span>
+              <span>{kdsDevice ? 'Disconnect' : 'Sign Out'}</span>
             </button>
           </div>
         </header>
