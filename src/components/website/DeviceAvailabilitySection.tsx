@@ -211,18 +211,23 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
 
       {/* Windows Software Download Modal */}
       {isDownloadModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden">
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsDownloadModalOpen(false);
+          }}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200 overflow-y-auto"
+        >
+          <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden my-auto">
             
             {/* Modal Header */}
-            <div className="p-6 sm:p-8 bg-linear-to-b from-orange-50/70 to-white border-b border-orange-100 flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-[#E87524] text-white flex items-center justify-center shadow-md shadow-orange-600/20">
-                  <Monitor className="w-7 h-7" />
+            <div className="p-5 sm:p-7 bg-linear-to-b from-orange-50/70 to-white border-b border-orange-100 flex items-start justify-between">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#E87524] text-white flex items-center justify-center shadow-md shadow-orange-600/20 shrink-0">
+                  <Monitor className="w-6 h-6 sm:w-7 sm:h-7" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-serif-headline text-2xl font-bold text-[#171A18]">
+                    <h3 className="font-serif-headline text-xl sm:text-2xl font-bold text-[#171A18]">
                       RestoHub for Windows
                     </h3>
                     <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
@@ -236,11 +241,13 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
               </div>
 
               <button
+                type="button"
                 onClick={() => setIsDownloadModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-colors"
+                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-black flex items-center justify-center cursor-pointer transition-colors shrink-0 shadow-xs"
+                title="Close modal"
                 aria-label="Close"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -331,26 +338,33 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-800">
-                      Option 2: Full Standalone Offline Package
+                      Option 2: Standalone Offline Package (Optimized)
                     </span>
-                    <span className="text-[10px] font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">
-                      416 MB Portable ZIP
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      136 MB Fast ZIP
                     </span>
                   </div>
                   <p className="text-xs text-slate-500">
-                    Complete standalone binary package including Chromium engine and hardware print driver.
+                    Optimized standalone binary package with Chromium engine and embedded thermal print drivers.
                   </p>
                   <button
                     onClick={handleDownloadWindows}
                     className="w-full py-2.5 px-5 rounded-xl border border-slate-300 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Download Full 416 MB ZIP Archive</span>
+                    <span>Download Windows ZIP (136 MB)</span>
                   </button>
                 </div>
 
-                <div className="text-[11px] text-center text-slate-400">
-                  Compatible with Windows 10 & 11 • All Counter & Thermal Printers Supported
+                <div className="flex items-center justify-between pt-1 text-[11px] text-slate-400">
+                  <span>Compatible with Windows 10 & 11</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsDownloadModalOpen(false)}
+                    className="text-slate-500 hover:text-slate-900 font-bold underline"
+                  >
+                    Close Window
+                  </button>
                 </div>
               </div>
 
