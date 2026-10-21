@@ -511,10 +511,10 @@ export const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex overflow-hidden bg-slate-50 dark:bg-[#0B0F17] select-none">
+    <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-slate-50 dark:bg-[#0B0F17] select-none">
       {/* Settings Navigation Tabs */}
-      <aside className="w-64 bg-white dark:bg-[#121824] border-r border-slate-200 dark:border-slate-800 p-4 space-y-1 overflow-y-auto shrink-0">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 block mb-2">
+      <aside className="w-full md:w-64 bg-white dark:bg-[#121824] border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 p-2 md:p-4 flex md:flex-col gap-1 overflow-x-auto md:overflow-y-auto shrink-0 scrollbar-none">
+        <span className="hidden md:block text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-2">
           Restaurant Configuration
         </span>
 
@@ -533,13 +533,13 @@ export const SettingsView: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => handleTabClick(tab.id as any)}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:px-3.5 md:py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all ${
                 isSelected
                   ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 bg-slate-50 md:bg-transparent dark:bg-slate-800/40 md:dark:bg-transparent'
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-4 h-4 shrink-0" />
               <span>{tab.label}</span>
             </button>
           );
@@ -547,12 +547,12 @@ export const SettingsView: React.FC = () => {
       </aside>
 
       {/* Main Settings Form Body */}
-      <main className="flex-1 overflow-y-auto p-6 flex flex-col justify-between max-w-4xl">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col justify-between max-w-full md:max-w-4xl w-full">
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
-            <div>
-              <h1 className="text-xl font-extrabold text-slate-900 dark:text-white capitalize">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white capitalize truncate">
                 {activeTab === 'profile' && 'Restaurant Profile & Business Details'}
                 {activeTab === 'billing' && 'Billing, GST & Receipt Settings'}
                 {activeTab === 'kitchen' && 'Kitchen Order Tickets & KDS Configuration'}
@@ -561,7 +561,7 @@ export const SettingsView: React.FC = () => {
                 {activeTab === 'backup' && 'Data Export & System Synchronization'}
                 {activeTab === 'staff' && 'Staff Directory & Access Control'}
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2 sm:line-clamp-none">
                 {activeTab === 'staff'
                   ? 'Manage restaurant team members, staff roles, outlet assignments, and send secure cryptographic invitations'
                   : activeTab === 'printers'
@@ -575,7 +575,7 @@ export const SettingsView: React.FC = () => {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50"
+                className="self-end sm:self-auto shrink-0 flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50"
               >
                 {isSaving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

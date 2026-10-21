@@ -268,127 +268,203 @@ export const KdsView: React.FC = () => {
     return it?.kitchenStatus || 'new';
   };
 
+  const [mobileColumnTab, setMobileColumnTab] = useState<'new' | 'preparing' | 'ready'>('new');
+
   const newTickets = tickets.filter((t) => t.status === 'sent');
   const preparingTickets = tickets.filter((t) => t.status === 'preparing');
   const readyTickets = tickets.filter((t) => t.status === 'ready');
 
   return (
     <div className="h-full w-full flex-1 flex flex-col bg-slate-100 dark:bg-[#0B0F17] overflow-hidden select-none">
-      {/* KDS Header */}
-      <div className="h-16 px-6 bg-white dark:bg-[#121824] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-sm">
-            <ChefHat className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-extrabold text-slate-900 dark:text-white leading-tight">
-                Kitchen Display System (KDS)
-              </h1>
-              {/* Online / Live Sync indicator */}
-              <div
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                  isOnline
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
-                    : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
-                }`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                <span>{isOnline ? 'Live Sync' : 'Offline'}</span>
-              </div>
+      {/* KDS Header - Fully Responsive */}
+      <div className="min-h-16 py-2.5 px-3 sm:px-6 bg-white dark:bg-[#121824] border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center justify-between w-full md:w-auto gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
+              <ChefHat className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-xs text-slate-500 dark:text-slate-400">
-              Live Station Routing • Instant Ready-to-Serve Waiter Dispatch
-            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-tight">
+                  Kitchen KDS
+                </h1>
+                {/* Online / Live Sync indicator */}
+                <div
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                    isOnline
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                      : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                  <span>{isOnline ? 'Sync' : 'Offline'}</span>
+                </div>
+              </div>
+              <span className="hidden lg:inline-block text-xs text-slate-500 dark:text-slate-400">
+                Live Station Routing • Instant Ready-to-Serve Waiter Dispatch
+              </span>
+            </div>
           </div>
-        </div>
 
-        {/* Station Routing Tabs */}
-        <div className="flex p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold overflow-x-auto">
-          <button
-            onClick={() => setSelectedStation('all')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              selectedStation === 'all'
-                ? 'bg-white dark:bg-blue-600 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            All Stations ({tickets.length})
-          </button>
-
-          {stations.map((stn) => {
-            const count = tickets.filter((t) => t.stationId === stn.id).length;
-            return (
-              <button
-                key={stn.id}
-                onClick={() => setSelectedStation(stn.id)}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  selectedStation === stn.id
-                    ? 'bg-white dark:bg-blue-600 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                {stn.name} ({count})
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Right Header: Sound Toggle, Active Kitchen Chef & Clock */}
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          {/* Audio Chime Toggle */}
-          <button
-            onClick={() => {
-              const next = !isSoundActive;
-              setIsSoundActive(next);
-              setNotificationSoundEnabled(next);
-              if (next) {
-                playNewTicketChime();
-                addToast('Kitchen order bell audio active', 'info');
-              } else {
-                addToast('Kitchen audio muted', 'info');
-              }
-            }}
-            className={`p-2 rounded-xl border text-xs font-bold transition-colors ${
-              isSoundActive
-                ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
-                : 'border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-slate-400'
-            }`}
-            title={isSoundActive ? 'Kitchen sound alert active (click to mute)' : 'Kitchen sound muted (click to unmute)'}
-          >
-            {isSoundActive ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-          </button>
-
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-            <User className="w-3.5 h-3.5 text-blue-500" />
-            <select
-              value={activeChef}
-              onChange={(e) => setActiveChef(e.target.value)}
-              className="bg-transparent focus:outline-none cursor-pointer font-bold text-slate-900 dark:text-white"
+          {/* Clock & Sound for mobile top-right */}
+          <div className="flex items-center gap-1.5 md:hidden">
+            <button
+              onClick={() => {
+                const next = !isSoundActive;
+                setIsSoundActive(next);
+                setNotificationSoundEnabled(next);
+                if (next) {
+                  playNewTicketChime();
+                  addToast('Kitchen sound active', 'info');
+                } else {
+                  addToast('Kitchen sound muted', 'info');
+                }
+              }}
+              className={`p-1.5 rounded-lg border text-xs ${
+                isSoundActive
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400'
+                  : 'border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-800 dark:bg-slate-800'
+              }`}
+              title="Toggle sound"
             >
-              <option value="Chef Suresh" className="dark:bg-slate-800">Chef Suresh (Head Chef)</option>
-              <option value="Chef Ramesh" className="dark:bg-slate-800">Chef Ramesh (Tandoor)</option>
-              <option value="Chef Anita" className="dark:bg-slate-800">Chef Anita (Desserts/Beverages)</option>
-            </select>
+              {isSoundActive ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-900 text-white dark:bg-slate-800 font-mono text-[11px] font-bold">
+              <Clock className="w-3 h-3 text-emerald-400" />
+              <span>{currentTime}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Station Routing Tabs & Chef Selector */}
+        <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto overflow-x-auto scrollbar-none">
+          <div className="flex p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold overflow-x-auto shrink-0 scrollbar-none">
+            <button
+              onClick={() => setSelectedStation('all')}
+              className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg whitespace-nowrap transition-all ${
+                selectedStation === 'all'
+                  ? 'bg-white dark:bg-blue-600 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              All ({tickets.length})
+            </button>
+
+            {stations.map((stn) => {
+              const count = tickets.filter((t) => t.stationId === stn.id).length;
+              return (
+                <button
+                  key={stn.id}
+                  onClick={() => setSelectedStation(stn.id)}
+                  className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg whitespace-nowrap transition-all ${
+                    selectedStation === stn.id
+                      ? 'bg-white dark:bg-blue-600 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {stn.name} ({count})
+                </button>
+              );
+            })}
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 text-white dark:bg-slate-800 font-mono text-xs font-bold shadow-xs">
-            <Clock className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{currentTime}</span>
+          <div className="hidden md:flex items-center gap-2 shrink-0">
+            {/* Audio Chime Toggle */}
+            <button
+              onClick={() => {
+                const next = !isSoundActive;
+                setIsSoundActive(next);
+                setNotificationSoundEnabled(next);
+                if (next) {
+                  playNewTicketChime();
+                  addToast('Kitchen order bell audio active', 'info');
+                } else {
+                  addToast('Kitchen audio muted', 'info');
+                }
+              }}
+              className={`p-2 rounded-xl border text-xs font-bold transition-colors ${
+                isSoundActive
+                  ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
+                  : 'border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-slate-400'
+              }`}
+              title={isSoundActive ? 'Kitchen sound alert active' : 'Kitchen sound muted'}
+            >
+              {isSoundActive ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              <User className="w-3.5 h-3.5 text-blue-500" />
+              <select
+                value={activeChef}
+                onChange={(e) => setActiveChef(e.target.value)}
+                className="bg-transparent focus:outline-none cursor-pointer font-bold text-slate-900 dark:text-white"
+              >
+                <option value="Chef Suresh" className="dark:bg-slate-800">Chef Suresh (Head Chef)</option>
+                <option value="Chef Ramesh" className="dark:bg-slate-800">Chef Ramesh (Tandoor)</option>
+                <option value="Chef Anita" className="dark:bg-slate-800">Chef Anita (Desserts)</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 text-white dark:bg-slate-800 font-mono text-xs font-bold shadow-xs">
+              <Clock className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{currentTime}</span>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Mobile Column Switcher Bar */}
+      <div className="flex md:hidden bg-slate-200/90 dark:bg-slate-800/90 p-1 rounded-xl mx-3 mt-2 shrink-0 gap-1 border border-slate-300/80 dark:border-slate-700/80">
+        <button
+          onClick={() => setMobileColumnTab('new')}
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            mobileColumnTab === 'new'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+          }`}
+        >
+          <Flame className="w-3.5 h-3.5" />
+          <span>New ({newTickets.length})</span>
+        </button>
+
+        <button
+          onClick={() => setMobileColumnTab('preparing')}
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            mobileColumnTab === 'preparing'
+              ? 'bg-amber-500 text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+          }`}
+        >
+          <Clock className="w-3.5 h-3.5" />
+          <span>Prep ({preparingTickets.length})</span>
+        </button>
+
+        <button
+          onClick={() => setMobileColumnTab('ready')}
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            mobileColumnTab === 'ready'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+          }`}
+        >
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          <span>Ready ({readyTickets.length})</span>
+        </button>
+      </div>
+
       {/* 3-Column Kanban Board - Responsive Grid */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 p-3 sm:p-6 overflow-y-auto md:overflow-hidden">
+      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5 p-3 sm:p-6 overflow-hidden">
         {/* Column 1: New Fired Tickets */}
-        <div className="flex flex-col min-h-[320px] md:min-h-0 h-full bg-slate-200/60 dark:bg-[#121824] rounded-2xl border border-slate-300/80 dark:border-slate-800/80 overflow-hidden">
-          <div className="p-3.5 bg-blue-600 text-white flex items-center justify-between font-bold text-sm shrink-0">
+        <div className={`flex-col h-full bg-slate-200/60 dark:bg-[#121824] rounded-2xl border border-slate-300/80 dark:border-slate-800/80 overflow-hidden ${
+          mobileColumnTab === 'new' ? 'flex' : 'hidden md:flex'
+        }`}>
+          <div className="p-3 sm:p-3.5 bg-blue-600 text-white flex items-center justify-between font-bold text-xs sm:text-sm shrink-0">
             <span className="flex items-center gap-1.5">
               <Flame className="w-4 h-4" />
               <span>New Tickets ({newTickets.length})</span>
             </span>
-            <span className="text-xs font-medium bg-blue-700/60 px-2 py-0.5 rounded-full">0 - 3 min</span>
+            <span className="text-[11px] sm:text-xs font-medium bg-blue-700/60 px-2 py-0.5 rounded-full">0 - 3 min</span>
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
@@ -466,13 +542,15 @@ export const KdsView: React.FC = () => {
         </div>
 
         {/* Column 2: In Preparation */}
-        <div className="flex flex-col min-h-[320px] md:min-h-0 h-full bg-slate-200/60 dark:bg-[#121824] rounded-2xl border border-slate-300/80 dark:border-slate-800/80 overflow-hidden">
-          <div className="p-3.5 bg-amber-500 text-white flex items-center justify-between font-bold text-sm shrink-0">
+        <div className={`flex-col h-full bg-slate-200/60 dark:bg-[#121824] rounded-2xl border border-slate-300/80 dark:border-slate-800/80 overflow-hidden ${
+          mobileColumnTab === 'preparing' ? 'flex' : 'hidden md:flex'
+        }`}>
+          <div className="p-3 sm:p-3.5 bg-amber-500 text-white flex items-center justify-between font-bold text-xs sm:text-sm shrink-0">
             <span className="flex items-center gap-1.5">
               <Clock className="w-4 h-4" />
               <span>Preparing ({preparingTickets.length})</span>
             </span>
-            <span className="text-xs font-medium bg-amber-600/60 px-2 py-0.5 rounded-full">In Kitchen</span>
+            <span className="text-[11px] sm:text-xs font-medium bg-amber-600/60 px-2 py-0.5 rounded-full">In Kitchen</span>
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
@@ -581,13 +659,15 @@ export const KdsView: React.FC = () => {
         </div>
 
         {/* Column 3: Ready for Service */}
-        <div className="flex flex-col min-h-[320px] md:min-h-0 h-full bg-slate-200/60 dark:bg-[#121824] rounded-2xl border border-slate-300/80 dark:border-slate-800/80 overflow-hidden">
-          <div className="p-3.5 bg-emerald-600 text-white flex items-center justify-between font-bold text-sm shrink-0">
+        <div className={`flex-col h-full bg-slate-200/60 dark:bg-[#121824] rounded-2xl border border-slate-300/80 dark:border-slate-800/80 overflow-hidden ${
+          mobileColumnTab === 'ready' ? 'flex' : 'hidden md:flex'
+        }`}>
+          <div className="p-3 sm:p-3.5 bg-emerald-600 text-white flex items-center justify-between font-bold text-xs sm:text-sm shrink-0">
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4" />
               <span>Ready for Service ({readyTickets.length})</span>
             </span>
-            <span className="text-xs font-medium bg-emerald-700/60 px-2 py-0.5 rounded-full">Notified</span>
+            <span className="text-[11px] sm:text-xs font-medium bg-emerald-700/60 px-2 py-0.5 rounded-full">Notified</span>
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">

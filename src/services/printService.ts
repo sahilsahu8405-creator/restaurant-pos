@@ -167,6 +167,20 @@ class PrintService {
     }
 
     if (connectionType === 'local_agent' || connectionType === 'network_escpos') {
+      const isElectron = typeof window !== 'undefined' && !!(window as any).restohubNative?.isElectron;
+      const isMobileDevice = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isLocalhost = Boolean(endpoint && (endpoint.includes('127.0.0.1') || endpoint.includes('localhost')));
+
+      // On mobile devices or non-desktop web browsers, never probe localhost to prevent scary browser permission popups
+      if ((isMobileDevice || !isElectron) && isLocalhost) {
+        return {
+          online: false,
+          message: isMobileDevice
+            ? 'Hardware printer bridge is for desktop counter PC. Mobile devices sync wirelessly to Kitchen KDS.'
+            : 'Print agent is offline. Start the RestoHub printer agent on desktop to enable thermal receipt printing.',
+        };
+      }
+
       try {
         const pingUrl = endpoint.replace('/print', '/status');
         const controller = new AbortController();
@@ -230,6 +244,22 @@ class PrintService {
 
     // 1. LOCAL ESC/POS PRINT AGENT (Silent, headless printing via local bridge)
     if (connectionType === 'local_agent' || connectionType === 'network_escpos') {
+      const isElectron = typeof window !== 'undefined' && !!(window as any).restohubNative?.isElectron;
+      const isMobileDevice = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isLocalhost = Boolean(endpoint && (endpoint.includes('127.0.0.1') || endpoint.includes('localhost')));
+
+      // On mobile devices or browsers, do not fetch localhost/127.0.0.1 to prevent Chrome Private Network Access security prompts
+      if ((isMobileDevice || !isElectron) && isLocalhost) {
+        return {
+          success: false,
+          jobId,
+          printerName,
+          connectionType,
+          isSilent: true,
+          message: 'Silent printer bridge is reserved for desktop counter PCs. Orders sync digitally to Kitchen KDS.',
+        };
+      }
+
       const payload = {
         jobId,
         type,

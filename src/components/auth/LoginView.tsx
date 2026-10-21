@@ -314,24 +314,30 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <span className="hover:text-slate-900 transition-colors">Higher Profits</span>
           </div>
 
-          {onBackToWebsite && (
-            <button
-              type="button"
-              onClick={onBackToWebsite}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-slate-300 hover:border-slate-400 bg-white/90 hover:bg-white text-xs font-bold text-slate-800 transition-all shadow-2xs cursor-pointer"
-            >
-              <ArrowRight className="w-3.5 h-3.5 rotate-180 text-orange-600" />
-              <span>Back to Website</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full bg-orange-100/80 border border-orange-200 text-[#EA580C] text-[11px] font-extrabold uppercase tracking-wider">
+              Direct Sign In
+            </span>
+
+            {onBackToWebsite && (
+              <button
+                type="button"
+                onClick={onBackToWebsite}
+                className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-slate-300 hover:border-slate-400 bg-white/90 hover:bg-white text-xs font-bold text-slate-800 transition-all shadow-2xs cursor-pointer"
+              >
+                <ArrowRight className="w-3.5 h-3.5 rotate-180 text-orange-600" />
+                <span>Back to Website</span>
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Main Split Section */}
-      <main className="relative z-10 w-full px-6 lg:px-16 py-8 sm:py-12 flex-1 flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-14 max-w-7xl mx-auto">
+      <main className="relative z-10 w-full px-4 sm:px-6 lg:px-16 py-6 sm:py-10 flex-1 flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-14 max-w-7xl mx-auto">
         
-        {/* Left Hero & Feature Highlights */}
-        <div className="w-full lg:w-7/12 flex flex-col justify-center space-y-7">
+        {/* Left Hero & Feature Highlights - Collapsed on small screens so Sign In is instant */}
+        <div className="w-full lg:w-7/12 hidden md:flex flex-col justify-center space-y-7 order-2 lg:order-1">
           <div className="space-y-4">
             <div className="inline-block text-[11px] font-extrabold uppercase tracking-[0.25em] text-slate-500">
               BUILT FOR MODERN RESTAURANTS
@@ -405,8 +411,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </div>
         </div>
 
-        {/* Right Floating Authentication Card */}
-        <div className="w-full lg:w-5/12 max-w-lg">
+        {/* Floating Authentication Card (First on mobile for immediate sign-in) */}
+        <div className="w-full lg:w-5/12 max-w-lg order-1 lg:order-2">
           <div className="bg-[#FAF7F2]/95 backdrop-blur-xl border border-white/80 rounded-[32px] p-6 sm:p-8 shadow-2xl shadow-black/10 space-y-6">
             
             {/* Top 4 Action Pills */}
