@@ -82,6 +82,7 @@ export interface KdsDeviceSession {
   lastSeenAt?: string;
   createdAt: string;
   outletName?: string;
+  restaurantName?: string;
 }
 
 export interface KitchenStation {

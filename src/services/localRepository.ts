@@ -72,6 +72,7 @@ import {
   isSameOutlet,
   syncKotTicketsToSupabase,
   fetchSupabaseKotTickets,
+  updateKotTicketStatusInSupabase,
 } from './supabaseClient';
 import { postCrossTabEvent } from '../utils/notificationSound';
 
@@ -474,7 +475,7 @@ class LocalDataRepository implements IDataAdapter {
           fssaiLicense: data.restaurant.fssaiLicense || '',
           operatingHours: data.restaurant.operatingHours || '11:00 AM - 11:00 PM',
           timezone: data.restaurant.timezone || 'Asia/Kolkata',
-          outlets: data.outlets.length > 0 ? data.outlets : this.restaurant.outlets,
+          outlets: data.outlets,
           settings: data.restaurant.settings || this.restaurant.settings,
         };
         this.restaurant = fullRestaurant;
@@ -482,7 +483,7 @@ class LocalDataRepository implements IDataAdapter {
         const outletToQuery = targetOutletId || fullRestaurant.outlets[0]?.id;
 
         // Fetch tenant-isolated operational records from Supabase
-        const [cats, items, sections, tables, orders, inv, exp] = await Promise.all([
+        const [cats, items, sections, tables, orders, inv, exp, remoteKots, remoteNotifs] = await Promise.all([
           fetchSupabaseCategories(targetRestaurantId),
           fetchSupabaseMenuItems(targetRestaurantId),
           outletToQuery ? fetchSupabaseSections(outletToQuery) : Promise.resolve([]),
@@ -490,6 +491,8 @@ class LocalDataRepository implements IDataAdapter {
           outletToQuery ? fetchSupabaseOrders(outletToQuery, targetRestaurantId) : Promise.resolve([]),
           fetchSupabaseInventory(targetRestaurantId),
           outletToQuery ? fetchSupabaseExpenses(targetRestaurantId, outletToQuery) : Promise.resolve([]),
+          outletToQuery ? fetchSupabaseKotTickets(outletToQuery) : Promise.resolve([]),
+          outletToQuery ? fetchKitchenNotificationsFromSupabase(outletToQuery) : Promise.resolve([]),
         ]);
 
         const isSpiceGarden = targetRestaurantId === 'e7b1a0e1-0000-4000-8000-000000000001';
@@ -560,6 +563,24 @@ class LocalDataRepository implements IDataAdapter {
           this.orders = mockInitialOrders;
         }
 
+        if (remoteKots && remoteKots.length > 0) {
+          this.kotTickets = remoteKots;
+        } else if (!isSpiceGarden) {
+          const storedKot = localStorage.getItem(this.getStorageKey('kot_tickets'));
+          this.kotTickets = storedKot ? JSON.parse(storedKot) : [];
+        } else {
+          this.kotTickets = [];
+        }
+
+        if (remoteNotifs && remoteNotifs.length > 0) {
+          this.kitchenNotifications = remoteNotifs;
+        } else if (!isSpiceGarden) {
+          const storedNotifs = localStorage.getItem(this.getStorageKey('notifications'));
+          this.kitchenNotifications = storedNotifs ? JSON.parse(storedNotifs) : [];
+        } else {
+          this.kitchenNotifications = [];
+        }
+
         this.inventory = inv.length > 0 ? inv : (isSpiceGarden ? mockInventory : []);
         this.expenses = exp.length > 0 ? exp : (isSpiceGarden ? mockExpenses : []);
 
@@ -569,6 +590,8 @@ class LocalDataRepository implements IDataAdapter {
         this.saveTables();
         this.saveSections();
         this.saveOrders();
+        this.saveKotTickets();
+        this.saveNotifications();
         this.saveInventory();
         this.saveExpenses();
 
@@ -1293,9 +1316,10 @@ class LocalDataRepository implements IDataAdapter {
     orderInput: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'updatedAt'> & { orderNumber?: string }
   ): Promise<Order> {
     const nextCounter = this.orders.length + 109;
+    const isCryptoUuidAvailable = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function';
     const newOrder: Order = {
       ...orderInput,
-      id: `ord-${Date.now()}`,
+      id: isCryptoUuidAvailable ? crypto.randomUUID() : `ord-${Date.now()}`,
       orderNumber: orderInput.orderNumber || `#${nextCounter}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -1521,8 +1545,9 @@ class LocalDataRepository implements IDataAdapter {
         item.kotNumber = kotNumber;
       }
 
+      const isCryptoUuidAvailable = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function';
       const ticket: KOTTicket = {
-        id: `kot-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: isCryptoUuidAvailable ? crypto.randomUUID() : `kot-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         outletId: order.outletId,
         orderId: order.id,
         orderNumber: order.orderNumber,
@@ -1640,6 +1665,16 @@ class LocalDataRepository implements IDataAdapter {
 
   async getKotTickets(outletId?: string, stationId?: string): Promise<KOTTicket[]> {
     this.rehydrateFromStorage();
+    if (outletId) {
+      try {
+        const remoteKots = await fetchSupabaseKotTickets(outletId);
+        if (remoteKots && remoteKots.length > 0) {
+          this.mergeKotTickets(remoteKots);
+        }
+      } catch (err) {
+        console.warn('Network sync of KOT tickets skipped:', err);
+      }
+    }
     return this.kotTickets.filter((t) => {
       const matchOutlet = !outletId || isSameOutlet(t.outletId, outletId);
       const matchStation = !stationId || stationId === 'all' || t.stationId === stationId;
@@ -1671,6 +1706,15 @@ class LocalDataRepository implements IDataAdapter {
       ...(status === 'served' ? { servedAt: now, servedBy: actor } : {}),
     };
     this.saveKotTickets();
+
+    // Sync ticket status to Supabase and broadcast operational event
+    updateKotTicketStatusInSupabase(currentTicket.id, status).catch(() => {});
+    broadcastOperationalEvent(currentTicket.outletId, 'ticket_status', {
+      ticketId: currentTicket.id,
+      status,
+      orderId: currentTicket.orderId,
+      outletId: currentTicket.outletId,
+    }).catch(() => {});
 
     // Sync order items kitchen status
     const ticket = this.kotTickets[idx];

@@ -635,8 +635,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deviceToken: data.device_token,
         isActive: true,
         createdAt: new Date().toISOString(),
+        outletName: data.outlet_name || undefined,
+        restaurantName: data.restaurant_name || undefined,
       };
 
+      localRepository.clearTenantData();
       setKdsDevice(deviceData);
       localStorage.setItem('restohub_kds_device', JSON.stringify(deviceData));
     } catch (err: any) {
@@ -677,8 +680,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             deviceToken: data.device_token,
             isActive: true,
             createdAt: new Date().toISOString(),
+            outletName: data.outlet_name || undefined,
+            restaurantName: data.restaurant_name || undefined,
           };
 
+          localRepository.clearTenantData();
           setKdsDevice(deviceData);
           localStorage.setItem('restohub_kds_device', JSON.stringify(deviceData));
           return;
@@ -699,6 +705,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const revokeKdsTerminal = () => {
     localStorage.removeItem('restohub_kds_device');
+    localRepository.clearTenantData();
     setKdsDevice(null);
   };
 

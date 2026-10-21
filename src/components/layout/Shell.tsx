@@ -334,7 +334,9 @@ export const Shell: React.FC<ShellProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-sm text-slate-900 dark:text-white">
-                  {kdsDevice ? kdsDevice.deviceName : membership?.restaurantName || 'Kitchen Display System'}
+                  {kdsDevice
+                    ? (kdsDevice.restaurantName ? `${kdsDevice.deviceName} • ${kdsDevice.restaurantName}` : kdsDevice.deviceName)
+                    : membership?.restaurantName || 'Kitchen Display System'}
                 </span>
                 <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
                   {kdsDevice ? 'Paired Terminal' : 'Kitchen Staff'}
@@ -342,7 +344,7 @@ export const Shell: React.FC<ShellProps> = ({
               </div>
               <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                 <Building2 className="w-3 h-3 text-slate-400" />
-                <span>{activeOutlet?.name || 'Assigned Kitchen Station'}</span>
+                <span>{activeOutlet?.name || kdsDevice?.outletName || 'Assigned Kitchen Station'}</span>
               </div>
             </div>
           </div>

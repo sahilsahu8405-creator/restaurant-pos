@@ -379,7 +379,7 @@ export async function syncKotTicketsToSupabase(tickets: any[]) {
     const rows = tickets.map((t) => {
       const dbOutlet = resolveOutletId(t.outletId) || t.outletId;
       const safeId = isUuidPattern.test(t.id) ? t.id : crypto.randomUUID();
-      const safeOrderId = isUuidPattern.test(t.orderId) ? t.orderId : crypto.randomUUID();
+      const safeOrderId = t.orderId && isUuidPattern.test(t.orderId) ? t.orderId : null;
       const safeStationId = t.stationId && isUuidPattern.test(t.stationId) ? t.stationId : null;
 
       return {
@@ -397,9 +397,23 @@ export async function syncKotTicketsToSupabase(tickets: any[]) {
       };
     });
 
-    await supabase.from('kot_tickets').upsert(rows, { onConflict: 'id' });
+    const { error } = await supabase.from('kot_tickets').upsert(rows, { onConflict: 'id' });
+    if (error) {
+      console.warn('Network sync of KOT tickets to Supabase error:', error.message);
+    }
   } catch (err) {
     console.warn('Network sync of KOT tickets to Supabase skipped:', err);
+  }
+}
+
+export async function updateKotTicketStatusInSupabase(ticketId: string, status: string) {
+  try {
+    const { error } = await supabase.from('kot_tickets').update({ status }).eq('id', ticketId);
+    if (error) {
+      console.warn('Failed to update ticket status in Supabase:', error.message);
+    }
+  } catch (err) {
+    console.warn('Failed to update ticket status in Supabase:', err);
   }
 }
 
@@ -1032,46 +1046,57 @@ export async function syncOrderToSupabase(order: any) {
   try {
     const restaurantId = resolveRestaurantId(order.restaurantId);
     const outletId = resolveOutletId(order.outletId) || order.outletId;
+    const isUuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    const orderPayload: any = {
+      restaurant_id: restaurantId,
+      outlet_id: outletId,
+      order_number: order.orderNumber,
+      order_type: order.orderType,
+      customer_name: order.customerName || null,
+      guest_count: order.guestCount || 1,
+      status: order.status,
+      payment_status: order.paymentStatus,
+      subtotal_paise: order.subtotalPaise,
+      discount_paise: order.discountPaise || 0,
+      tax_paise: (order.cgstPaise || 0) + (order.sgstPaise || 0),
+      rounding_paise: order.roundingPaise || 0,
+      total_paise: order.totalPaise,
+      notes: order.notes || null,
+      created_at: order.createdAt,
+      updated_at: order.updatedAt,
+    };
+
+    if (order.id && isUuidPattern.test(order.id)) {
+      orderPayload.id = order.id;
+    }
 
     const { data: insertedOrder, error: orderErr } = await supabase
       .from('orders')
-      .insert({
-        restaurant_id: restaurantId,
-        outlet_id: outletId,
-        order_number: order.orderNumber,
-        order_type: order.orderType,
-        customer_name: order.customerName || null,
-        guest_count: order.guestCount || 1,
-        status: order.status,
-        payment_status: order.paymentStatus,
-        subtotal_paise: order.subtotalPaise,
-        discount_paise: order.discountPaise || 0,
-        tax_paise: (order.cgstPaise || 0) + (order.sgstPaise || 0),
-        rounding_paise: order.roundingPaise || 0,
-        total_paise: order.totalPaise,
-        notes: order.notes || null,
-        created_at: order.createdAt,
-        updated_at: order.updatedAt,
-      })
+      .upsert(orderPayload, { onConflict: 'id' })
       .select()
-      .single();
+      .maybeSingle();
 
     if (orderErr) {
       console.warn('Failed to sync order to Supabase:', orderErr.message);
       return;
     }
 
-    if (insertedOrder && order.items && order.items.length > 0) {
+    const targetOrderId = insertedOrder?.id || (order.id && isUuidPattern.test(order.id) ? order.id : null);
+
+    if (targetOrderId && order.items && order.items.length > 0) {
       const itemsToInsert = order.items.map((i: any) => ({
-        order_id: insertedOrder.id,
-        item_id: i.menuItem?.id && i.menuItem.id.length >= 32 ? i.menuItem.id : 'd1000000-0000-0000-0000-000000000001',
+        order_id: targetOrderId,
+        item_id: i.menuItem?.id && isUuidPattern.test(i.menuItem.id) ? i.menuItem.id : null,
         item_name_snapshot: i.menuItem?.name || 'Dish',
         unit_price_paise: i.unitPricePaise,
         quantity: i.quantity,
         subtotal_paise: i.subtotalPaise,
+        tax_paise: i.taxPaise || 0,
         kitchen_status: i.kitchenStatus || 'new',
       }));
 
+      await supabase.from('order_items').delete().eq('order_id', targetOrderId);
       await supabase.from('order_items').insert(itemsToInsert);
     }
   } catch (err) {
