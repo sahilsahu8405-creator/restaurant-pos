@@ -29,6 +29,7 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
     const link = document.createElement('a');
     link.href = '/downloads/RestoHub-POS.apk';
     link.setAttribute('download', 'RestoHub-POS.apk');
+    link.setAttribute('type', 'application/vnd.android.package-archive');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -327,7 +328,7 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
                       RestoHub for Android
                     </h3>
                     <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                      v1.0.0 APK
+                      v1.0.0 APK • 4.7 MB
                     </span>
                   </div>
                   <p className="text-xs text-[#686A64] mt-0.5">
@@ -379,7 +380,7 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
                       1
                     </span>
                     <div>
-                      <span className="font-bold text-[#171A18]">Download the APK:</span> Tap the download button below directly on your Android tablet or smartphone to get <code className="bg-white px-1.5 py-0.5 rounded border border-orange-200 text-orange-800">RestoHub-POS.apk</code>.
+                      <span className="font-bold text-[#171A18]">Download the APK:</span> Tap the download button below directly on your Android tablet or smartphone to get <code className="bg-white px-1.5 py-0.5 rounded border border-orange-200 text-orange-800">RestoHub-POS.apk</code> (4.7 MB).
                     </div>
                   </div>
 
@@ -410,7 +411,7 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
                   className="w-full py-3.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer transition-all"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Download RestoHub Android APK (Universal)</span>
+                  <span>Download RestoHub Android APK (4.7 MB)</span>
                 </button>
                 <div className="text-[11px] text-center text-slate-400">
                   Compatible with Android 7.0+ (Nougat through Android 15) • Tablets & Handhelds

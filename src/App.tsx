@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
 import { Shell } from './components/layout/Shell';
@@ -6,11 +7,13 @@ import { WebsiteApp } from './components/website/WebsiteApp';
 
 function AppRouter() {
   const { session, kdsDevice } = useAuth();
+  const isNativePlatform = typeof window !== 'undefined' && (Capacitor.isNativePlatform() || !!(window as any).Capacitor?.isNativePlatform?.());
   const isFileProtocol = typeof window !== 'undefined' && window.location.protocol === 'file:';
   const isDesktopApp = isFileProtocol || !!(window as any).restohubNative?.isElectron;
+  const isStandaloneApp = isNativePlatform || isDesktopApp;
 
   const getPath = () => {
-    if (isDesktopApp) {
+    if (isStandaloneApp) {
       const hash = window.location.hash.replace(/^#/, '');
       return hash ? (hash.startsWith('/') ? hash : `/${hash}`) : '/app';
     }
@@ -32,7 +35,7 @@ function AppRouter() {
   }, []);
 
   const navigateTo = (newPath: string) => {
-    if (isDesktopApp) {
+    if (isStandaloneApp) {
       window.location.hash = newPath;
       setPath(newPath);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -90,12 +93,15 @@ function AppRouter() {
     path === '/privacy' ||
     path === '/terms';
 
-  // In native desktop software (Electron), ALWAYS render POS Shell directly!
-  // Cashiers at billing counter will never see the marketing website.
-  if (isDesktopApp) {
+  // In native phone app (Android APK) or native desktop software (Electron), ALWAYS render POS Shell directly!
+  // Waiters and cashiers on phone/tablet will open the POS directly without marketing distractions.
+  if (isStandaloneApp && path !== '/website') {
     return (
       <Shell
         initialAuthTab={isRegisterRoute ? 'register_owner' : 'signin'}
+        onBackToWebsite={() => {
+          navigateTo('/website');
+        }}
       />
     );
   }
@@ -103,7 +109,7 @@ function AppRouter() {
   // On web, unauthenticated root boots into marketing website.
   const isWebsiteMode = (session || kdsDevice)
     ? isMarketingSubpage || (path === '/' && window.location.search.includes('view=website'))
-    : !isLoginRoute && !isRegisterRoute && !isAppRoute;
+    : (!isLoginRoute && !isRegisterRoute && !isAppRoute) || path === '/website';
 
   return (
     <>
