@@ -27,6 +27,16 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
     setIsDownloadModalOpen(true);
   };
 
+  const handleDownloadFastLauncher = () => {
+    // Instant 1-click lightweight launcher (under 2 KB) for Windows PCs
+    const link = document.createElement('a');
+    link.href = '/downloads/RestoHub-POS-Silent-Print.bat';
+    link.setAttribute('download', 'RestoHub-POS-Counter-Launcher.bat');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleDownloadAndroid = () => {
     // Initiate browser file download for the compiled Android APK
     const link = document.createElement('a');
@@ -293,16 +303,54 @@ export const DeviceAvailabilitySection: React.FC<DeviceAvailabilityProps> = ({
               </div>
 
               {/* Download Buttons */}
-              <div className="space-y-2 pt-2">
-                <button
-                  onClick={handleDownloadWindows}
-                  className="w-full py-3.5 px-6 rounded-2xl bg-[#E87524] hover:bg-[#CC5E15] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md shadow-orange-500/20 cursor-pointer transition-all"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download RestoHub for Windows (64-bit)</span>
-                </button>
+              <div className="space-y-3 pt-2">
+                {/* Option 1: Instant 1-Second Launcher (Lightning Fast) */}
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                      Option 1: Instant Fast Launcher (Recommended)
+                    </span>
+                    <span className="text-[10px] font-extrabold bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-full">
+                      ~2 KB • Instant
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-700 leading-relaxed">
+                    Downloads in 1 second! Instantly launches counter POS on any Windows PC with zero-preview direct silent printing enabled.
+                  </p>
+                  <button
+                    onClick={handleDownloadFastLauncher}
+                    className="w-full py-3 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-all active:scale-[0.99]"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download Instant PC Launcher (1-Second)</span>
+                  </button>
+                </div>
+
+                {/* Option 2: Full Standalone Offline Package */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800">
+                      Option 2: Full Standalone Offline Package
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">
+                      416 MB Portable ZIP
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Complete standalone binary package including Chromium engine and hardware print driver.
+                  </p>
+                  <button
+                    onClick={handleDownloadWindows}
+                    className="w-full py-2.5 px-5 rounded-xl border border-slate-300 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Full 416 MB ZIP Archive</span>
+                  </button>
+                </div>
+
                 <div className="text-[11px] text-center text-slate-400">
-                  Compatible with Windows 10 & 11 • Standalone Portable Package
+                  Compatible with Windows 10 & 11 • All Counter & Thermal Printers Supported
                 </div>
               </div>
 
